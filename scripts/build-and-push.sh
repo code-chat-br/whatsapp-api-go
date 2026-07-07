@@ -9,7 +9,7 @@ usage() {
 Build and push the whatsapp-go-api Docker image to Docker Hub.
 
 Required variables:
-  DOCKERHUB_USERNAME  Docker Hub namespace, for example codechatbr
+  DOCKERHUB_USERNAME  Docker Hub namespace, for example codechat
   DOCKER_IMAGE_NAME   Docker Hub repository name, for example whatsapp-go-api
   IMAGE_VERSION       Required version tag, for example v1.0.0
 
@@ -26,7 +26,7 @@ Optional variables:
   PUSH_COMMIT_TAG     true publishes sha-<short commit>. Defaults to false.
 
 Example:
-  DOCKERHUB_USERNAME=codechatbr \
+  DOCKERHUB_USERNAME=codechat \
   DOCKER_IMAGE_NAME=whatsapp-go-api \
   IMAGE_VERSION=v1.0.0 \
   APP_NAME="whatsapp-go-api" \

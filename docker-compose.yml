@@ -1,20 +1,8 @@
 services:
-  codechat-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        GO_VERSION: ${GO_VERSION:-1.26}
-        APP_NAME: ${APP_NAME:-whatsapp-go-api}
-        APP_VERSION: ${APP_VERSION:-dev}
-        APP_DESCRIPTION: ${APP_DESCRIPTION:-API HTTP em Go para gerenciar instancias do WhatsApp com Whatsmeow}
-        APP_DEVELOPER: ${APP_DEVELOPER:-CodeChat}
-        APP_REPOSITORY: ${APP_REPOSITORY:-}
-        BUILD_DATE: ${BUILD_DATE:-}
-        VCS_REF: ${VCS_REF:-}
-        VCS_URL: ${VCS_URL:-}
+  codechat_api:
     image: ${DOCKER_IMAGE:-codechat/whatsapp-go-api}:${IMAGE_TAG:-latest}
     restart: unless-stopped
+    container_name: codechat_api
     environment:
       DOCKER_ENV: "true"
       TZ: ${TZ:-America/Sao_Paulo}
@@ -54,8 +42,8 @@ services:
       MESSAGE_PROCESSING_TIMEOUT: ${MESSAGE_PROCESSING_TIMEOUT:-60s}
       MESSAGE_GROUP_INFO_TIMEOUT: ${MESSAGE_GROUP_INFO_TIMEOUT:-30s}
       MESSAGE_SEND_TIMEOUT: ${MESSAGE_SEND_TIMEOUT:-30s}
-    expose:
-      - "${SERVER_PORT:-8084}"
+    # expose:
+    #   - "${SERVER_PORT:-8084}"
     volumes:
       - codechat_data:/app/data
     security_opt:
@@ -68,18 +56,18 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=${TRAEFIK_NETWORK:-public_network}"
-      - "traefik.http.routers.codechat-api.rule=Host(`${API_HOST:-api.codechat.local}`)"
-      - "traefik.http.routers.codechat-api.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
-      - "traefik.http.routers.codechat-api.service=codechat-api"
-      - "traefik.http.routers.codechat-api.tls=${TRAEFIK_TLS:-true}"
-      - "traefik.http.routers.codechat-api.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
-      - "traefik.http.services.codechat-api.loadbalancer.server.port=${SERVER_PORT:-8084}"
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.docker.network=${TRAEFIK_NETWORK:-public_network}"
+    #   - "traefik.http.routers.codechat-api.rule=Host(`${API_HOST:-api.codechat.local}`)"
+    #   - "traefik.http.routers.codechat-api.entrypoints=${TRAEFIK_ENTRYPOINT:-web}"
+    #   - "traefik.http.routers.codechat-api.service=codechat-api"
+    #   - "traefik.http.routers.codechat-api.tls=${TRAEFIK_TLS:-true}"
+    #   - "traefik.http.routers.codechat-api.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
+    #   - "traefik.http.services.codechat-api.loadbalancer.server.port=${SERVER_PORT:-8084}"
     networks:
       - codechat_network
-      - traefik_network
+      - public_network
 
 volumes:
   codechat_data:
@@ -87,6 +75,6 @@ volumes:
 networks:
   codechat_network:
     driver: bridge
-  traefik_network:
+  public_network:
     external: true
     name: ${TRAEFIK_NETWORK:-public_network}
