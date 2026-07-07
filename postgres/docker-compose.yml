@@ -1,0 +1,54 @@
+services:
+  postgres:
+    container_name: postgres_server
+    restart: always
+    image: postgres:17
+    entrypoint: [/usr/local/bin/docker-entrypoint.sh]
+    command:
+      [
+        postgres,
+        -c,
+        max_connections=500,
+        -c,
+        shared_buffers=1GB,
+        -c,
+        work_mem=16MB,
+        -c,
+        maintenance_work_mem=256MB
+      ]
+
+    # ports:
+    #   - '5432:5432'
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - database_network
+
+    environment:
+      - POSTGRES_PASSWORD=8Q8cGBieK12hQ2JF
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+
+    labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.postgres.rule=HostSNI(`*`)
+      - traefik.tcp.routers.postgres.entryPoints=postgres_db
+      - traefik.tcp.routers.postgres.service=postgres
+      - traefik.tcp.services.postgres.loadBalancer.server.port=5432
+
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2048M
+
+volumes:
+ postgres_data:
+   external: true
+   name: postgres_data
+
+networks:
+  database_network:
+    driver: bridge
+    external: true
