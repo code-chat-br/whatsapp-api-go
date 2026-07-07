@@ -173,7 +173,9 @@ Use `docker compose`; não use o comando legado `docker-compose`.
 
 ### Clonar o projeto
 
-A URL remota do repositório não pôde ser identificada de forma confiável neste checkout local. Após clonar pela URL real do seu repositório ou fork, entre no diretório:
+```
+git clone https://github.com/code-chat-br/whatsapp-api-go.git
+```
 
 ```bash
 cd whatsapp-go-api
