@@ -44,9 +44,10 @@ services:
           memory: 2048M
 
 volumes:
- postgres_data:
-   external: true
-   name: postgres_data
+  
+  postgres_data:
+    external: true
+    name: postgres_data
 
 networks:
   database_network:
