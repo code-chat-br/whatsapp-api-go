@@ -1,0 +1,92 @@
+services:
+  codechat-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26}
+        APP_NAME: ${APP_NAME:-whatsapp-go-api}
+        APP_VERSION: ${APP_VERSION:-dev}
+        APP_DESCRIPTION: ${APP_DESCRIPTION:-API HTTP em Go para gerenciar instancias do WhatsApp com Whatsmeow}
+        APP_DEVELOPER: ${APP_DEVELOPER:-CodeChat}
+        APP_REPOSITORY: ${APP_REPOSITORY:-}
+        BUILD_DATE: ${BUILD_DATE:-}
+        VCS_REF: ${VCS_REF:-}
+        VCS_URL: ${VCS_URL:-}
+    image: ${DOCKER_IMAGE:-codechat/whatsapp-go-api}:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      DOCKER_ENV: "true"
+      TZ: ${TZ:-America/Sao_Paulo}
+      SERVER_PORT: ${SERVER_PORT:-8084}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      FFMPEG_PATH: ${FFMPEG_PATH:-/usr/bin/ffmpeg}
+      FFPROBE_PATH: ${FFPROBE_PATH:-/usr/bin/ffprobe}
+      TMPDIR: ${TMPDIR:-/app/tmp}
+      DATABASE_URL: ${DATABASE_URL:-}
+      DATABASE_SAVE_DATA_NEW_MESSAGE: ${DATABASE_SAVE_DATA_NEW_MESSAGE:-true}
+      DATABASE_SAVE_MESSAGE_UPDATE: ${DATABASE_SAVE_MESSAGE_UPDATE:-false}
+      DATABASE_SAVE_DATA_CONTACTS: ${DATABASE_SAVE_DATA_CONTACTS:-false}
+      WHATSAPP_SESSION_STORE: ${WHATSAPP_SESSION_STORE:-postgres}
+      WHATSAPP_SESSION_SQLITE_DSN: ${WHATSAPP_SESSION_SQLITE_DSN:-file:./data/whatsmeow.db?_foreign_keys=on}
+      WHATSAPP_SESSION_POSTGRES_URL: ${WHATSAPP_SESSION_POSTGRES_URL:-}
+      WEBHOOK_GLOBAL_URL: ${WEBHOOK_GLOBAL_URL:-}
+      WEBHOOK_GLOBAL_ENABLED: ${WEBHOOK_GLOBAL_ENABLED:-false}
+      AUTHENTICATION_JWT_EXPIRES_IN: ${AUTHENTICATION_JWT_EXPIRES_IN:-3600}
+      AUTHENTICATION_JWT_SECRET: ${AUTHENTICATION_JWT_SECRET:-}
+      AUTHENTICATION_GLOBAL_AUTH_TOKEN: ${AUTHENTICATION_GLOBAL_AUTH_TOKEN:-}
+      QRCODE_LIMIT: ${QRCODE_LIMIT:-5}
+      QRCODE_EXPIRATION_TIME: ${QRCODE_EXPIRATION_TIME:-30}
+      QRCODE_LIGHT_COLOR: ${QRCODE_LIGHT_COLOR:-#ffffff}
+      QRCODE_DARK_COLOR: ${QRCODE_DARK_COLOR:-#198754}
+      CONFIG_SESSION_PHONE_CLIENT: ${CONFIG_SESSION_PHONE_CLIENT:-DESKTOP}
+      CONFIG_SESSION_PHONE_NAME: ${CONFIG_SESSION_PHONE_NAME:-CodeChat}
+      WHATSAPP_PAIRING_TIMEOUT: ${WHATSAPP_PAIRING_TIMEOUT:-3m}
+      WHATSAPP_AUTO_RECONNECT: ${WHATSAPP_AUTO_RECONNECT:-true}
+      WHATSAPP_STARTUP_RECONNECT_CONCURRENCY: ${WHATSAPP_STARTUP_RECONNECT_CONCURRENCY:-5}
+      WHATSAPP_CONNECT_TIMEOUT: ${WHATSAPP_CONNECT_TIMEOUT:-30}
+      WHATSAPP_RECONNECT_INITIAL_DELAY: ${WHATSAPP_RECONNECT_INITIAL_DELAY:-2}
+      WHATSAPP_RECONNECT_MAX_DELAY: ${WHATSAPP_RECONNECT_MAX_DELAY:-60}
+      WHATSAPP_PROFILE_PICTURE_TIMEOUT: ${WHATSAPP_PROFILE_PICTURE_TIMEOUT:-15}
+      WHATSAPP_ADDRESS_CACHE_TTL: ${WHATSAPP_ADDRESS_CACHE_TTL:-168h}
+      MESSAGE_PROCESSING_WORKERS: ${MESSAGE_PROCESSING_WORKERS:-4}
+      MESSAGE_PROCESSING_QUEUE_SIZE: ${MESSAGE_PROCESSING_QUEUE_SIZE:-100}
+      MESSAGE_PROCESSING_TIMEOUT: ${MESSAGE_PROCESSING_TIMEOUT:-60s}
+      MESSAGE_GROUP_INFO_TIMEOUT: ${MESSAGE_GROUP_INFO_TIMEOUT:-30s}
+      MESSAGE_SEND_TIMEOUT: ${MESSAGE_SEND_TIMEOUT:-30s}
+    expose:
+      - "${SERVER_PORT:-8084}"
+    volumes:
+      - codechat_data:/app/data
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget --spider -q "http://127.0.0.1:${SERVER_PORT:-8084}/health"
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-public_network}"
+      - "traefik.http.routers.codechat-api.rule=Host(`${API_HOST:-api.codechat.local}`)"
+      - "traefik.http.routers.codechat-api.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.codechat-api.service=codechat-api"
+      - "traefik.http.routers.codechat-api.tls=${TRAEFIK_TLS:-true}"
+      - "traefik.http.routers.codechat-api.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.services.codechat-api.loadbalancer.server.port=${SERVER_PORT:-8084}"
+    networks:
+      - codechat_network
+      - traefik_network
+
+volumes:
+  codechat_data:
+
+networks:
+  codechat_network:
+    driver: bridge
+  traefik_network:
+    external: true
+    name: ${TRAEFIK_NETWORK:-public_network}

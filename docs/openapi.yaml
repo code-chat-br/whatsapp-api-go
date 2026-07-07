@@ -1,0 +1,655 @@
+openapi: 3.0.3
+info:
+  title: whatsapp-go-api
+  version: 1.0.0
+  description: API contract for message sending endpoints.
+paths:
+  /message/sendText/{instanceName}:
+    post:
+      summary: Send a text message
+      description: Sends synchronously unless options.mentionAll is true.
+      security:
+        - instanceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendTextRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/MessageSent'
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /message/sendLink/{instanceName}:
+    post:
+      summary: Send a link message
+      description: Supports options.mentionAll.
+      security:
+        - instanceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendLinkRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/MessageSent'
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /message/sendMedia/{instanceName}:
+    post:
+      summary: Send media from URL
+      description: Supports image, document, video, audio and ptv. Supports options.mentionAll.
+      security:
+        - instanceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMediaRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/MessageSent'
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /message/sendMediaFile/{instanceName}:
+    post:
+      summary: Send media from multipart file upload
+      description: Uses multipart field attachment. Supports options.mentionAll through multipart form fields.
+      security:
+        - instanceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendMediaFileRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/MessageSent'
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /message/sendWhatsAppAudio/{instanceName}:
+    post:
+      summary: Send WhatsApp PTT audio from URL
+      description: Downloads and prepares audio as WhatsApp PTT. Supports options.mentionAll.
+      security:
+        - instanceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendWhatsAppAudioRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/MessageSent'
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /message/sendWhatsAppAudioFile/{instanceName}:
+    post:
+      summary: Send WhatsApp PTT audio from multipart file upload
+      description: Uses multipart field attachment. Supports options.mentionAll through multipart form fields.
+      security:
+        - instanceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendWhatsAppAudioFileRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/MessageSent'
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /message/sendContact/{instanceName}:
+    post:
+      summary: Send one or more contact cards
+      description: Supports quoted message, delay, presence, external attributes and options.mentionAll.
+      security:
+        - instanceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendContactRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/MessageSent'
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /message/sendLocation/{instanceName}:
+    post:
+      summary: Send a location
+      description: Supports quoted message, delay, presence, external attributes and options.mentionAll.
+      security:
+        - instanceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendLocationRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/MessageSent'
+        '202':
+          $ref: '#/components/responses/Accepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /message/sendReaction/{instanceName}:
+    post:
+      summary: Send a reaction to an existing message
+      description: Does not support options.mentionAll because ReactionMessage has no ContextInfo.MentionedJID.
+      security:
+        - instanceBearer: []
+      parameters:
+        - $ref: '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendReactionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/MessageSent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  securitySchemes:
+    instanceBearer:
+      type: http
+      scheme: bearer
+  parameters:
+    InstanceName:
+      name: instanceName
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    MessageSent:
+      description: Message sent synchronously and persisted.
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    Accepted:
+      description: Message accepted for asynchronous mentionAll processing.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProcessingAcceptedResponse'
+          example:
+            statusCode: 202
+            status: processing
+            message: A mensagem foi aceita e esta sendo processada.
+            processId: 019f4ec1-f9b1-7c33-a4ef-d47715cb29e4
+            instanceName: codechat
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            mentionAllRequiresGroup:
+              value:
+                statusCode: 400
+                error: bad-request
+                code: MENTION_ALL_REQUIRES_GROUP
+                messages:
+                  - A opcao mentionAll somente pode ser utilizada em grupos.
+            mentionAllUnsupported:
+              value:
+                statusCode: 400
+                error: bad-request
+                code: MENTION_ALL_NOT_SUPPORTED_FOR_MESSAGE_TYPE
+                messages:
+                  - A opcao mentionAll nao e suportada para este tipo de mensagem.
+    ServiceUnavailable:
+      description: WhatsApp unavailable or asynchronous processor unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            queueFull:
+              value:
+                statusCode: 503
+                error: service-unavailable
+                code: MESSAGE_PROCESSING_QUEUE_FULL
+                messages:
+                  - O servico de processamento de mensagens esta temporariamente ocupado.
+            processorStopped:
+              value:
+                statusCode: 503
+                error: service-unavailable
+                code: MESSAGE_PROCESSOR_STOPPED
+                messages:
+                  - O servico de processamento de mensagens nao esta disponivel.
+  schemas:
+    RecipientFields:
+      type: object
+      properties:
+        number:
+          type: string
+          nullable: true
+        chat:
+          type: string
+          nullable: true
+        recipient:
+          type: string
+          nullable: true
+    MessageOptions:
+      type: object
+      properties:
+        delay:
+          type: integer
+          format: int64
+          nullable: true
+        presence:
+          type: string
+          nullable: true
+          enum:
+            - composing
+            - recording
+            - paused
+        quotedMessageId:
+          type: integer
+          format: int64
+          nullable: true
+        quotedMessage:
+          type: object
+          nullable: true
+          additionalProperties: true
+        externalAttributes:
+          type: object
+          nullable: true
+          additionalProperties: true
+        mentionAll:
+          type: boolean
+          nullable: true
+          default: false
+          description: Mentions all current group participants when the message type supports ContextInfo.MentionedJID.
+    SendTextRequest:
+      allOf:
+        - $ref: '#/components/schemas/RecipientFields'
+        - type: object
+          required:
+            - textMessage
+          properties:
+            options:
+              $ref: '#/components/schemas/MessageOptions'
+            textMessage:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+    SendLinkRequest:
+      allOf:
+        - $ref: '#/components/schemas/RecipientFields'
+        - type: object
+          required:
+            - linkMessage
+          properties:
+            options:
+              $ref: '#/components/schemas/MessageOptions'
+            linkMessage:
+              type: object
+              required:
+                - link
+              properties:
+                link:
+                  type: string
+                  format: uri
+                thumbnailUrl:
+                  type: string
+                  format: uri
+                  nullable: true
+                title:
+                  type: string
+                  nullable: true
+                description:
+                  type: string
+                  nullable: true
+    SendMediaRequest:
+      allOf:
+        - $ref: '#/components/schemas/RecipientFields'
+        - type: object
+          required:
+            - mediaMessage
+          properties:
+            options:
+              $ref: '#/components/schemas/MessageOptions'
+            mediaMessage:
+              $ref: '#/components/schemas/MediaMessage'
+    MediaMessage:
+      type: object
+      required:
+        - mediatype
+        - media
+      properties:
+        mediatype:
+          type: string
+          enum:
+            - image
+            - document
+            - video
+            - audio
+            - ptv
+        fileName:
+          type: string
+          nullable: true
+        caption:
+          type: string
+          nullable: true
+        media:
+          type: string
+          format: uri
+    SendMediaFileRequest:
+      type: object
+      required:
+        - number
+        - mediaType
+        - attachment
+      properties:
+        number:
+          type: string
+        mediaType:
+          type: string
+          enum:
+            - image
+            - document
+            - video
+            - audio
+            - ptv
+        caption:
+          type: string
+          nullable: true
+        delay:
+          type: integer
+          format: int64
+        presence:
+          type: string
+        quotedMessageId:
+          type: integer
+          format: int64
+        quotedMessage:
+          type: string
+        mentionAll:
+          type: boolean
+        attachment:
+          type: string
+          format: binary
+    SendWhatsAppAudioRequest:
+      type: object
+      required:
+        - number
+        - audioMessage
+      properties:
+        number:
+          type: string
+        options:
+          $ref: '#/components/schemas/MessageOptions'
+        audioMessage:
+          type: object
+          required:
+            - audio
+          properties:
+            audio:
+              type: string
+              format: uri
+    SendWhatsAppAudioFileRequest:
+      type: object
+      required:
+        - number
+        - attachment
+      properties:
+        number:
+          type: string
+        delay:
+          type: integer
+          format: int64
+        presence:
+          type: string
+        quotedMessageId:
+          type: integer
+          format: int64
+        quotedMessage:
+          type: string
+        mentionAll:
+          type: boolean
+        attachment:
+          type: string
+          format: binary
+    SendContactRequest:
+      allOf:
+        - $ref: '#/components/schemas/RecipientFields'
+        - type: object
+          required:
+            - contactMessage
+          properties:
+            options:
+              $ref: '#/components/schemas/MessageOptions'
+            contactMessage:
+              type: array
+              minItems: 1
+              items:
+                $ref: '#/components/schemas/ContactMessage'
+    ContactMessage:
+      type: object
+      required:
+        - fullName
+      properties:
+        fullName:
+          type: string
+        wuid:
+          type: string
+        phoneNumber:
+          type: string
+        organization:
+          type: string
+          nullable: true
+        vcard:
+          type: string
+          nullable: true
+    SendLocationRequest:
+      allOf:
+        - $ref: '#/components/schemas/RecipientFields'
+        - type: object
+          required:
+            - locationMessage
+          properties:
+            options:
+              $ref: '#/components/schemas/MessageOptions'
+            locationMessage:
+              $ref: '#/components/schemas/LocationMessage'
+    LocationMessage:
+      type: object
+      required:
+        - latitude
+        - longitude
+      properties:
+        name:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+    SendReactionRequest:
+      type: object
+      required:
+        - reactionMessage
+      properties:
+        options:
+          $ref: '#/components/schemas/MessageOptions'
+        reactionMessage:
+          type: object
+          required:
+            - key
+            - reaction
+          properties:
+            key:
+              type: object
+              required:
+                - remoteJid
+                - id
+              properties:
+                remoteJid:
+                  type: string
+                fromMe:
+                  type: boolean
+                  nullable: true
+                id:
+                  type: string
+                participant:
+                  type: string
+                  nullable: true
+            reaction:
+              type: string
+    ProcessingAcceptedResponse:
+      type: object
+      required:
+        - statusCode
+        - status
+        - message
+        - processId
+        - instanceName
+      properties:
+        statusCode:
+          type: integer
+          example: 202
+        status:
+          type: string
+          example: processing
+        message:
+          type: string
+        processId:
+          type: string
+        instanceName:
+          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - statusCode
+        - error
+        - messages
+      properties:
+        statusCode:
+          type: integer
+        error:
+          type: string
+        code:
+          type: string
+        messages:
+          type: array
+          items:
+            type: string
+    MentionAllSendMessageWebhookData:
+      type: object
+      description: Data object used inside the standard send.message webhook envelope.
+      properties:
+        processId:
+          type: string
+        status:
+          type: string
+          enum:
+            - sent
+            - failed
+        mentionAll:
+          type: boolean
+        data:
+          type: object
+          properties:
+            messageId:
+              type: string
+            remoteJid:
+              type: string
+            participantCount:
+              type: integer
+            timestamp:
+              type: string
+              format: date-time
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - INSTANCE_NOT_CONNECTED
+                - GROUP_INFO_FETCH_FAILED
+                - GROUP_HAS_NO_PARTICIPANTS
+                - MESSAGE_SEND_FAILED
+                - GROUP_MENTION_PROCESSING_FAILED
+            message:
+              type: string
+        externalAttributes:
+          type: object
+          additionalProperties: true

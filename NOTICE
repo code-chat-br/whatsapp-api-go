@@ -1,0 +1,20 @@
+whatsapp-go-api
+
+Copyright (c) 2026 [LEGAL OWNER NAME]
+
+This project is licensed under the GNU Affero General Public License
+version 3.0 only, using the SPDX identifier AGPL-3.0-only. See the
+LICENSE file for the full license text.
+
+The AGPL-3.0-only license applies to the original project code in this
+repository. Third-party components, libraries, generated artifacts, and
+other materials remain subject to their respective licenses and notices.
+See THIRD_PARTY_NOTICES.md for dependency license information identified
+from this checkout.
+
+Whatsmeow is an independent third-party project and remains subject to
+its own license.
+
+WhatsApp and Meta are trademarks of their respective owners. This
+project is not affiliated with, sponsored by, endorsed by, or otherwise
+officially connected to Meta or WhatsApp.

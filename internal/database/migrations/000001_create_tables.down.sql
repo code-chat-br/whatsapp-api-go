@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS "Webhook";
+DROP TABLE IF EXISTS "Contact";
+DROP TABLE IF EXISTS "Chat";
+DROP TABLE IF EXISTS "MessageUpdate";
+DROP TABLE IF EXISTS "Message";
+DROP TABLE IF EXISTS "Auth";
+DROP TABLE IF EXISTS "InstanceWhatsAppConnection";
+DROP TABLE IF EXISTS "Instance";
+DROP TYPE IF EXISTS "DeviceMessage";
+DROP TYPE IF EXISTS "InstanceConnectionStatus";
