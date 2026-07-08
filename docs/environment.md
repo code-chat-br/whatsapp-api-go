@@ -86,7 +86,6 @@ Variables must be provided directly to the container:
 
 ```yaml
 environment:
-  DOCKER_ENV: "true"
   SERVER_PORT: "${SERVER_PORT}"
   LOG_LEVEL: "${LOG_LEVEL}"
   DATABASE_URL: "${DATABASE_URL}"
