@@ -2,7 +2,6 @@
 
 | Variable | Required | Example | Description |
 | --- | ---: | --- | --- |
-| `DOCKER_ENV` | No | `false` | Defines whether `.env` is loaded. The default is `false`. |
 | `SERVER_PORT` | No | `8084` | HTTP listener port. The app listens on `:SERVER_PORT`. Default is `8084`. |
 | `LOG_LEVEL` | No | `trace` | Global Zerolog level. Accepted values: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `panic`, `disabled`. Default is `info`. |
 | `DATABASE_URL` | Yes | `postgres://...` | PostgreSQL connection string. |
