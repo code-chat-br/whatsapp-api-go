@@ -157,6 +157,7 @@ O repositório contém `Dockerfile`, `docker-compose.yml`, `.env.docker.example`
 Links oficiais:
 
 - [Docker Engine](https://docs.docker.com/engine/install/)
+  - [Script de instalação](https://docs.docker.com/engine/install/ubuntu/#install-using-the-convenience-script)
 - [Docker Desktop para Windows e macOS](https://docs.docker.com/desktop/)
 - [Instalação em Linux](https://docs.docker.com/engine/install/#server)
 
@@ -221,22 +222,20 @@ Variáveis mínimas para iniciar a API:
 - `WHATSAPP_RECONNECT_MAX_DELAY`
 - `WHATSAPP_PROFILE_PICTURE_TIMEOUT`
 
-Consulte a [documentação de variáveis de ambiente](./docs/environment.md) para a lista completa.
+Consulte a [documentação de variáveis de ambiente](./docs/environment.md#environment-configuration) para a lista completa.
 
 ### Preparar o banco de dados
 
-O banco principal da API é PostgreSQL, configurado por `DATABASE_URL`. Crie o banco antes de iniciar a aplicação ou executar migrations.
+O banco principal da API é PostgreSQL, configurado por `DATABASE_URL`. Crie o banco antes de iniciar a aplicação, antes de executar migrations.
 
-Exemplo com `psql`:
-
-```bash
-createdb whatsapp
+```SQL
+CREATE DATABASE WHATSAPP;
 ```
 
 Configure a URL no `.env`, por exemplo:
 
 ```dotenv
-DATABASE_URL="postgres://postgres:postgres@localhost:5432/whatsapp?sslmode=disable"
+DATABASE_URL="postgres://postgres:postgres@postgres.local:5432/whatsapp?sslmode=disable"
 ```
 
 A store de sessão Whatsmeow é escolhida por `WHATSAPP_SESSION_STORE`:
@@ -254,7 +253,7 @@ go run ./cmd/migrate
 
 As migrations do banco principal ficam em `internal/database/migrations` e registram o estado em `schema_migrations`. Há arquivos `.down.sql`, mas o código atual não expõe comando de rollback nem comando de status.
 
-Leia mais em [Migrations](./docs/migrations.md).
+Leia mais em [Migrations](./docs/migrations.md#migrations).
 
 ### Iniciar a aplicação
 
@@ -299,46 +298,7 @@ go build -o .\api.exe .\cmd\api
 
 O container executa a API pelo entrypoint real `./cmd/api`, compilado como `/app/codechat-api`. A imagem final usa Alpine, instala `ffmpeg` e `ffprobe`, define `DOCKER_ENV=true`, roda como usuário não-root `app` e mantém as migrations em `/app/internal/database/migrations`, porque o runner atual lê `internal/database/migrations` do filesystem.
 
-### Build local
-
-Linux ou macOS:
-
-```bash
-docker build \
-  --build-arg GO_VERSION="$(grep '^go ' go.mod | awk '{print $2}')" \
-  --build-arg APP_NAME="whatsapp-go-api" \
-  --build-arg APP_VERSION="dev" \
-  --build-arg APP_DESCRIPTION="API HTTP em Go para gerenciar instancias do WhatsApp com Whatsmeow" \
-  --build-arg APP_DEVELOPER="CodeChat" \
-  --build-arg APP_REPOSITORY="$(git config --get remote.origin.url)" \
-  --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
-  --build-arg VCS_REF="$(git rev-parse HEAD)" \
-  --build-arg VCS_URL="$(git config --get remote.origin.url)" \
-  -t codechat-whatsapp-api:dev \
-  .
-```
-
-PowerShell:
-
-```powershell
-$goVersion = (Select-String -Path go.mod -Pattern '^go ' | ForEach-Object { $_.Line.Split(' ')[1] })
-$buildDate = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-$vcsRef = git rev-parse HEAD
-$vcsUrl = git config --get remote.origin.url
-
-docker build `
-  --build-arg GO_VERSION="$goVersion" `
-  --build-arg APP_NAME="whatsapp-go-api" `
-  --build-arg APP_VERSION="dev" `
-  --build-arg APP_DESCRIPTION="API HTTP em Go para gerenciar instancias do WhatsApp com Whatsmeow" `
-  --build-arg APP_DEVELOPER="CodeChat" `
-  --build-arg APP_REPOSITORY="$vcsUrl" `
-  --build-arg BUILD_DATE="$buildDate" `
-  --build-arg VCS_REF="$vcsRef" `
-  --build-arg VCS_URL="$vcsUrl" `
-  -t codechat-whatsapp-api:dev `
-  .
-```
+[Imagem oficial](https://hub.docker.com/repository/docker/codechat/whatsapp-go-api/general) no DockerHub.
 
 ### Execução direta
 
@@ -346,10 +306,10 @@ docker build `
 docker run --rm \
   --env-file .env \
   -p 8084:8084 \
-  codechat-whatsapp-api:dev
+  codechat/whatsapp-go-api:latest
 ```
 
-No Docker, mantenha `DOCKER_ENV=true`. A porta interna padrão é `8084`, lida de `SERVER_PORT`, e as rotas públicas de saúde continuam sendo:
+No Docker, mantenha `DOCKER_ENV=true`. A porta interna padrão é `8084`, lida de `SERVER_PORT`, e as rotas públicas de saúde são:
 
 ```text
 GET /health
@@ -362,7 +322,7 @@ Crie um arquivo `.env` a partir do exemplo e preencha as variáveis reais. Não 
 
 ```bash
 cp .env.docker.example .env
-docker compose up -d --build
+docker compose up -d
 ```
 
 Logs:
@@ -384,13 +344,13 @@ O Compose não publica a porta no host por padrão; ele usa `expose` para o Trae
 Crie a rede externa somente se ela ainda não existir:
 
 ```bash
-docker network create traefik_public
+docker network create public_network
 ```
 
 O serviço entra nas redes `codechat_network` e `traefik_network`. A rede externa é parametrizada por:
 
 ```env
-TRAEFIK_NETWORK=traefik_public
+TRAEFIK_NETWORK=public_network
 ```
 
 Regra padrão:
@@ -486,54 +446,6 @@ ffmpeg -version
 ffprobe -version
 ```
 
-### Build e push multiplataforma
-
-O script publica imagens para `linux/amd64` e `linux/arm64` por padrão e exige uma tag de versão explícita.
-
-```bash
-chmod +x scripts/build-and-push.sh
-
-DOCKERHUB_USERNAME=codechatbr \
-DOCKER_IMAGE_NAME=whatsapp-go-api \
-IMAGE_VERSION=v1.0.0 \
-APP_NAME="whatsapp-go-api" \
-APP_DEVELOPER="CodeChat" \
-PUSH_LATEST=true \
-PUSH_COMMIT_TAG=true \
-./scripts/build-and-push.sh
-```
-
-Variáveis aceitas:
-
-```text
-DOCKERHUB_USERNAME
-DOCKER_IMAGE_NAME
-IMAGE_VERSION
-GO_VERSION
-APP_NAME
-APP_DESCRIPTION
-APP_DEVELOPER
-APP_REPOSITORY
-VCS_URL
-PLATFORMS
-BUILDER_NAME
-PUSH_LATEST
-PUSH_COMMIT_TAG
-```
-
-Verificar labels:
-
-```bash
-docker image inspect codechatbr/whatsapp-go-api:v1.0.0
-```
-
-Verificar manifesto:
-
-```bash
-docker buildx imagetools inspect \
-  codechatbr/whatsapp-go-api:v1.0.0
-```
-
 ## Configuração
 
 As variáveis estão agrupadas nas seguintes áreas:
@@ -547,17 +459,17 @@ As variáveis estão agrupadas nas seguintes áreas:
 - Webhooks: URL global e ativação global.
 - Processamento de mensagens: workers, fila e timeouts.
 
-Consulte a [documentação de variáveis de ambiente](./docs/environment.md).
+Consulte a [documentação de variáveis de ambiente](./docs/environment.md#docker-execution).
 
 ## Documentação
 
 A documentação técnica completa está disponível em [`/docs`](./docs/).
 
-- [Variáveis de ambiente](./docs/environment.md): descreve execução local, execução em Docker e configuração da store de sessões Whatsmeow.
-- [Migrations](./docs/migrations.md): resume o comando dedicado de migrations e o comportamento no startup.
-- [Pareamento por Passkey](./docs/passkey-pairing.md): detalha endpoints, headers, estados e limitações do fluxo de passkey.
-- [Envio de mensagens](./docs/send-messages.md): documenta corpos, respostas, opções, fila, erros e limitações dos endpoints de mensagem.
-- [Webhooks](./docs/webhooks.md): descreve configuração, envelope, headers, entrega e payloads dos eventos suportados.
+- [Variáveis de ambiente](./docs/environment.md#environment-configuration): descreve execução local, execução em Docker e configuração da store de sessões Whatsmeow.
+- [Migrations](./docs/migrations.md#migrations): resume o comando dedicado de migrations e o comportamento no startup.
+- [Pareamento por Passkey](./docs/passkey-pairing.md#pareamento-por-passkey-no-whatsapp): detalha endpoints, headers, estados e limitações do fluxo de passkey.
+- [Envio de mensagens](./docs/send-messages.md#send-messages): documenta corpos, respostas, opções, fila, erros e limitações dos endpoints de mensagem.
+- [Webhooks](./docs/webhooks.md#webhooks): descreve configuração, envelope, headers, entrega e payloads dos eventos suportados.
 - [OpenAPI](./docs/openapi.yaml): especificação OpenAPI estática dos endpoints de envio de mensagem.
 
 ## Autenticação
