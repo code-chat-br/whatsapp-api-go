@@ -1,6 +1,6 @@
 services:
   codechat_api:
-    image: ${DOCKER_IMAGE:-codechat/whatsapp-go-api}:${IMAGE_TAG:-latest}
+    image: codechat/whatsapp-go-api
     restart: unless-stopped
     container_name: codechat_api
     environment:
