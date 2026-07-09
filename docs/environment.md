@@ -1,57 +1,57 @@
-# Environment configuration
+# Configuração de ambiente
 
-| Variable | Required | Example | Description |
+| Variável | Obrigatória | Exemplo | Descrição |
 | --- | ---: | --- | --- |
-| `SERVER_PORT` | No | `8084` | HTTP listener port. The app listens on `:SERVER_PORT`. Default is `8084`. |
-| `LOG_LEVEL` | No | `trace` | Global Zerolog level. Accepted values: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `panic`, `disabled`. Default is `info`. |
-| `DATABASE_URL` | Yes | `postgres://...` | PostgreSQL connection string. |
-| `DATABASE_SAVE_DATA_NEW_MESSAGE` | No | `true` | Enables persistence of WhatsApp `Message` rows from incoming message events. Defaults to `true`. |
-| `DATABASE_SAVE_MESSAGE_UPDATE` | No | `false` | Enables persistence of WhatsApp receipt events in `MessageUpdate`. Defaults to `false`. |
-| `DATABASE_SAVE_DATA_CONTACTS` | No | `false` | Enables persistence of WhatsApp contact sync and contact events in `Contact`. Defaults to `false`. |
-| `WHATSAPP_SESSION_STORE` | No | `postgres` | Database engine used by whatsmeow for sessions and devices. Accepted values: `sqlite`, `postgres`. Defaults to `postgres` when unset. |
-| `WHATSAPP_SESSION_SQLITE_DSN` | No | `file:./data/whatsmeow.db?_foreign_keys=on` | SQLite DSN used only when `WHATSAPP_SESSION_STORE=sqlite`. Foreign keys must remain enabled. |
-| `WHATSAPP_SESSION_POSTGRES_URL` | No | `postgres://...` | Optional dedicated PostgreSQL connection string for whatsmeow sessions. When empty, `DATABASE_URL` is used for the whatsmeow SQL store. |
-| `WEBHOOK_GLOBAL_URL` | No | `https://example.com/webhook` | Global webhook URL. Must be absolute `http` or `https`; required only when `WEBHOOK_GLOBAL_ENABLED=true`. |
-| `WEBHOOK_GLOBAL_ENABLED` | No | `false` | Enables sending every recognized event from every instance to `WEBHOOK_GLOBAL_URL`. Defaults to `false`. |
-| `AUTHENTICATION_JWT_EXPIRES_IN` | Yes | `3600` | JWT expiration in seconds. The value `0` removes the `exp` claim. |
-| `AUTHENTICATION_JWT_SECRET` | Yes | `strong-secret` | Secret key used to sign JWTs with HS256. |
-| `AUTHENTICATION_GLOBAL_AUTH_TOKEN` | Yes | `admin-token` | Token used only to create and list instances. |
-| `QRCODE_LIMIT` | Yes | `5` | Maximum QR codes served during one pairing attempt. |
-| `QRCODE_EXPIRATION_TIME` | Yes | `30` | Maximum QR code lifetime in seconds. |
-| `QRCODE_LIGHT_COLOR` | Yes | `#ffffff` | Light color used in QR PNG generation. |
-| `QRCODE_DARK_COLOR` | Yes | `#198754` | Dark color used in QR PNG generation. |
-| `CONFIG_SESSION_PHONE_CLIENT` | No | `DESKTOP` | Platform type shown in WhatsApp linked devices. Defaults to `DESKTOP`. Supported values: `ALOHA`, `ANDROID_AMBIGUOUS`, `ANDROID_PHONE`, `ANDROID_TABLET`, `AR_DEVICE`, `AR_WRIST`, `CATALINA`, `CHROME`, `CLOUD_API`, `DESKTOP`, `EDGE`, `FIREFOX`, `IE`, `IOS_CATALYST`, `IOS_PHONE`, `IPAD`, `OHANA`, `OPERA`, `SAFARI`, `SMARTGLASSES`, `TCL_TV`, `UWP`, `VR`, `WEAR_OS`. |
-| `CONFIG_SESSION_PHONE_NAME` | No | `CodeChat` | System or client name shown in WhatsApp linked devices. Defaults to `CodeChat`. |
-| `WHATSAPP_PAIRING_TIMEOUT` | No | `3m` | Total QR pairing context timeout. Defaults to `3m` when unset. |
-| `WHATSAPP_AUTO_RECONNECT` | Yes | `true` | Enables startup restoration for desired-online sessions. |
-| `WHATSAPP_STARTUP_RECONNECT_CONCURRENCY` | Yes | `5` | Maximum concurrent restored WhatsApp sessions. |
-| `WHATSAPP_CONNECT_TIMEOUT` | Yes | `30` | Initial connection wait timeout in seconds. |
-| `WHATSAPP_RECONNECT_INITIAL_DELAY` | Yes | `2` | Initial reconnect backoff in seconds. |
-| `WHATSAPP_RECONNECT_MAX_DELAY` | Yes | `60` | Maximum reconnect backoff in seconds. |
-| `WHATSAPP_PROFILE_PICTURE_TIMEOUT` | Yes | `15` | Profile picture retrieval timeout in seconds. |
-| `WHATSAPP_ADDRESS_CACHE_TTL` | No | `168h` | TTL for cached WhatsApp address-to-canonical-JID mappings. Defaults to `168h`. |
-| `MESSAGE_PROCESSING_WORKERS` | No | `4` | Maximum number of asynchronous message jobs processed in parallel. Defaults to `4`. |
-| `MESSAGE_PROCESSING_QUEUE_SIZE` | No | `100` | Maximum number of asynchronous message jobs waiting in memory. Defaults to `100`; values must be greater than zero. |
-| `MESSAGE_PROCESSING_TIMEOUT` | No | `60s` | Total timeout for one asynchronous message job. Defaults to `60s`. |
-| `MESSAGE_GROUP_INFO_TIMEOUT` | No | `30s` | Timeout for loading WhatsApp group information and participants during `mentionAll` processing. Defaults to `30s`. |
-| `MESSAGE_SEND_TIMEOUT` | No | `30s` | Timeout for presence/delay and final WhatsApp send during asynchronous message processing. Defaults to `30s`. |
+| `SERVER_PORT` | Não | `8084` | Porta do listener HTTP. A aplicação escuta em `:SERVER_PORT`. O padrão é `8084`. |
+| `LOG_LEVEL` | Não | `trace` | Nível global do Zerolog. Valores aceitos: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `panic`, `disabled`. O padrão é `info`. |
+| `DATABASE_URL` | Sim | `postgres://...` | String de conexão com o PostgreSQL. |
+| `DATABASE_SAVE_DATA_NEW_MESSAGE` | Não | `true` | Habilita a persistência de linhas WhatsApp `Message` a partir de eventos de mensagens recebidas. O padrão é `true`. |
+| `DATABASE_SAVE_MESSAGE_UPDATE` | Não | `false` | Habilita a persistência de eventos de recibo do WhatsApp em `MessageUpdate`. O padrão é `false`. |
+| `DATABASE_SAVE_DATA_CONTACTS` | Não | `false` | Habilita a persistência de sincronização e eventos de contatos do WhatsApp em `Contact`. O padrão é `false`. |
+| `WHATSAPP_SESSION_STORE` | Não | `postgres` | Banco usado pelo whatsmeow para sessões e dispositivos. Valores aceitos: `sqlite`, `postgres`. O padrão é `postgres` quando não for definido. |
+| `WHATSAPP_SESSION_SQLITE_DSN` | Não | `file:./data/whatsmeow.db?_foreign_keys=on` | DSN do SQLite usado somente quando `WHATSAPP_SESSION_STORE=sqlite`. As chaves estrangeiras precisam continuar habilitadas. |
+| `WHATSAPP_SESSION_POSTGRES_URL` | Não | `postgres://...` | String de conexão opcional e dedicada do PostgreSQL para as sessões do whatsmeow. Quando vazia, `DATABASE_URL` é usada pelo SQL store do whatsmeow. |
+| `WEBHOOK_GLOBAL_URL` | Não | `https://example.com/webhook` | URL do webhook global. Precisa ser `http` ou `https` absoluta; obrigatória somente quando `WEBHOOK_GLOBAL_ENABLED=true`. |
+| `WEBHOOK_GLOBAL_ENABLED` | Não | `false` | Habilita o envio de todos os eventos reconhecidos de todas as instâncias para `WEBHOOK_GLOBAL_URL`. O padrão é `false`. |
+| `AUTHENTICATION_JWT_EXPIRES_IN` | Sim | `3600` | Expiração do JWT em segundos. O valor `0` remove a claim `exp`. |
+| `AUTHENTICATION_JWT_SECRET` | Sim | `strong-secret` | Chave secreta usada para assinar JWTs com HS256. |
+| `AUTHENTICATION_GLOBAL_AUTH_TOKEN` | Sim | `admin-token` | Token usado somente para criar e listar instâncias. |
+| `QRCODE_LIMIT` | Sim | `5` | Número máximo de QR codes servidos durante uma tentativa de pareamento. |
+| `QRCODE_EXPIRATION_TIME` | Sim | `30` | Tempo máximo de vida do QR code em segundos. |
+| `QRCODE_LIGHT_COLOR` | Sim | `#ffffff` | Cor clara usada na geração do QR PNG. |
+| `QRCODE_DARK_COLOR` | Sim | `#198754` | Cor escura usada na geração do QR PNG. |
+| `CONFIG_SESSION_PHONE_CLIENT` | Não | `DESKTOP` | Tipo de plataforma exibido nos dispositivos conectados do WhatsApp. O padrão é `DESKTOP`. Valores aceitos: `ALOHA`, `ANDROID_AMBIGUOUS`, `ANDROID_PHONE`, `ANDROID_TABLET`, `AR_DEVICE`, `AR_WRIST`, `CATALINA`, `CHROME`, `CLOUD_API`, `DESKTOP`, `EDGE`, `FIREFOX`, `IE`, `IOS_CATALYST`, `IOS_PHONE`, `IPAD`, `OHANA`, `OPERA`, `SAFARI`, `SMARTGLASSES`, `TCL_TV`, `UWP`, `VR`, `WEAR_OS`. |
+| `CONFIG_SESSION_PHONE_NAME` | Não | `CodeChat` | Nome do sistema ou cliente exibido nos dispositivos conectados do WhatsApp. O padrão é `CodeChat`. |
+| `WHATSAPP_PAIRING_TIMEOUT` | Não | `3m` | Timeout total do contexto de pareamento por QR. O padrão é `3m` quando não for definido. |
+| `WHATSAPP_AUTO_RECONNECT` | Sim | `true` | Habilita a restauração, na inicialização, das sessões que deveriam estar online. |
+| `WHATSAPP_STARTUP_RECONNECT_CONCURRENCY` | Sim | `5` | Número máximo de sessões WhatsApp restauradas em paralelo. |
+| `WHATSAPP_CONNECT_TIMEOUT` | Sim | `30` | Timeout inicial de espera da conexão, em segundos. |
+| `WHATSAPP_RECONNECT_INITIAL_DELAY` | Sim | `2` | Backoff inicial de reconexão, em segundos. |
+| `WHATSAPP_RECONNECT_MAX_DELAY` | Sim | `60` | Backoff máximo de reconexão, em segundos. |
+| `WHATSAPP_PROFILE_PICTURE_TIMEOUT` | Sim | `15` | Timeout para buscar foto de perfil, em segundos. |
+| `WHATSAPP_ADDRESS_CACHE_TTL` | Não | `168h` | TTL dos mapeamentos em cache entre endereço WhatsApp e JID canônico. O padrão é `168h`. |
+| `MESSAGE_PROCESSING_WORKERS` | Não | `4` | Número máximo de jobs assíncronos de mensagem processados em paralelo. O padrão é `4`. |
+| `MESSAGE_PROCESSING_QUEUE_SIZE` | Não | `100` | Número máximo de jobs assíncronos de mensagem aguardando em memória. O padrão é `100`; os valores precisam ser maiores que zero. |
+| `MESSAGE_PROCESSING_TIMEOUT` | Não | `60s` | Timeout total para um job assíncrono de mensagem. O padrão é `60s`. |
+| `MESSAGE_GROUP_INFO_TIMEOUT` | Não | `30s` | Timeout para carregar informações e participantes de grupo do WhatsApp durante o processamento de `mentionAll`. O padrão é `30s`. |
+| `MESSAGE_SEND_TIMEOUT` | Não | `30s` | Timeout para presença/delay e envio final pelo WhatsApp durante o processamento assíncrono de mensagem. O padrão é `30s`. |
 
-## Local execution
+## Execução local
 
 ```bash
 cp .env.dev .env
 go run ./cmd/...
 ```
 
-When `DOCKER_ENV` is absent or set to `false`, the application loads `.env` and then reads values from the process environment. Variables already defined in the process have priority over values in `.env`.
+Quando `DOCKER_ENV` está ausente ou definido como `false`, a aplicação carrega `.env` e depois lê os valores do ambiente do processo. Variáveis já definidas no processo têm prioridade sobre os valores em `.env`.
 
-`.env.dev` is a reference file for local development and is not loaded automatically.
+`.env.dev` é um arquivo de referência para desenvolvimento local e não é carregado automaticamente.
 
-## Whatsmeow session store
+## Store de sessão do Whatsmeow
 
-`DATABASE_URL` remains the main API database. `WHATSAPP_SESSION_POSTGRES_URL` is optional and is used only by the whatsmeow SQL store when it is filled. The API repositories and migrations always use `DATABASE_URL`.
+`DATABASE_URL` continua sendo o banco principal da API. `WHATSAPP_SESSION_POSTGRES_URL` é opcional e é usado somente pelo SQL store do whatsmeow quando estiver preenchido. Os repositórios da API e as migrations sempre usam `DATABASE_URL`.
 
-SQLite stores sessions in a local file and requires persistent storage in containers. The default DSN keeps SQLite foreign keys enabled:
+O SQLite armazena sessões em um arquivo local e exige armazenamento persistente em containers. O DSN padrão mantém as chaves estrangeiras do SQLite habilitadas:
 
 ```env
 WHATSAPP_SESSION_STORE="sqlite"
@@ -59,7 +59,7 @@ WHATSAPP_SESSION_SQLITE_DSN="file:./data/whatsmeow.db?_foreign_keys=on"
 WHATSAPP_SESSION_POSTGRES_URL=""
 ```
 
-When Postgres is selected and `WHATSAPP_SESSION_POSTGRES_URL` is empty, whatsmeow uses the same PostgreSQL server/database configured in `DATABASE_URL`, while still using its own SQL connection and lifecycle:
+Quando Postgres é selecionado e `WHATSAPP_SESSION_POSTGRES_URL` está vazio, o whatsmeow usa o mesmo servidor/banco PostgreSQL configurado em `DATABASE_URL`, mas ainda com sua própria conexão SQL e seu próprio ciclo de vida:
 
 ```env
 DATABASE_URL="postgresql://api:password@postgres:5432/codechat"
@@ -68,7 +68,7 @@ WHATSAPP_SESSION_STORE="postgres"
 WHATSAPP_SESSION_POSTGRES_URL=""
 ```
 
-When `WHATSAPP_SESSION_POSTGRES_URL` is filled, whatsmeow sessions are initialized and migrated only in that dedicated database. The app does not fall back to `DATABASE_URL` if the dedicated URL is invalid or unavailable:
+Quando `WHATSAPP_SESSION_POSTGRES_URL` está preenchido, as sessões do whatsmeow são inicializadas e migradas somente nesse banco dedicado. A aplicação não volta para `DATABASE_URL` se a URL dedicada estiver inválida ou indisponível:
 
 ```env
 DATABASE_URL="postgresql://api:password@postgres:5432/codechat"
@@ -77,11 +77,11 @@ WHATSAPP_SESSION_STORE="postgres"
 WHATSAPP_SESSION_POSTGRES_URL="postgresql://sessions:password@postgres:5432/codechat_sessions"
 ```
 
-Changing `WHATSAPP_SESSION_STORE` does not migrate existing sessions automatically. Devices are available in the new backend only if the whatsmeow data was migrated beforehand; otherwise instances may need to be paired again. The previous backend is not deleted.
+Alterar `WHATSAPP_SESSION_STORE` não migra sessões existentes automaticamente. Os dispositivos só ficam disponíveis no novo backend se os dados do whatsmeow tiverem sido migrados antes; caso contrário, pode ser necessário parear as instâncias novamente. O backend anterior não é apagado.
 
-## Docker execution
+## Execução com Docker
 
-Variables must be provided directly to the container:
+As variáveis precisam ser fornecidas diretamente ao container:
 
 ```yaml
 environment:
@@ -120,27 +120,27 @@ environment:
   MESSAGE_SEND_TIMEOUT: "${MESSAGE_SEND_TIMEOUT:-30s}"
 ```
 
-When `DOCKER_ENV=true`, `.env` and `.env.dev` are not loaded.
+Quando `DOCKER_ENV=true`, `.env` e `.env.dev` não são carregados.
 
-If `WHATSAPP_SESSION_STORE=sqlite`, mount a persistent volume for the SQLite directory. For the default DSN, persist `/app/data` or the equivalent working-directory `data` path used by the image:
+Se `WHATSAPP_SESSION_STORE=sqlite`, monte um volume persistente para o diretório do SQLite. Para o DSN padrão, persista `/app/data` ou o caminho equivalente `data` do diretório de trabalho usado pela imagem:
 
 ```yaml
 volumes:
   - whatsmeow_sessions:/app/data
 ```
 
-`AUTHENTICATION_GLOBAL_AUTH_TOKEN` authenticates only `POST /instance/create` and `GET /instance/create`. It does not authenticate `GET /instance/fetchInstance/:instanceName` and is not accepted by `PUT /instance/refreshToken/:instanceName`.
+`AUTHENTICATION_GLOBAL_AUTH_TOKEN` autentica somente `POST /instance/create` e `GET /instance/create`. Ele não autentica `GET /instance/fetchInstance/:instanceName` e não é aceito por `PUT /instance/refreshToken/:instanceName`.
 
-The refresh endpoint requires `Authorization: Bearer <token>` and the same current JWT in the `oldToken` body field. It rotates the stored `Auth.token` for that instance, immediately invalidates the old token, and does not represent a second refresh-token type.
+O endpoint de refresh exige `Authorization: Bearer <token>` e o mesmo JWT atual no campo `oldToken` do corpo da requisição. Ele rotaciona o `Auth.token` armazenado para aquela instância, invalida imediatamente o token antigo e não representa um segundo tipo de refresh-token.
 
-`AUTHENTICATION_JWT_EXPIRES_IN=0` removes the `exp` claim completely. It does not generate `exp: 0`.
+`AUTHENTICATION_JWT_EXPIRES_IN=0` remove completamente a claim `exp`. Ele não gera `exp: 0`.
 
-Do not use development secrets in production. JWTs, API keys, global tokens, database URLs, and secrets must not be written to logs.
+Não use segredos de desenvolvimento em produção. JWTs, chaves de API, tokens globais, URLs de banco e segredos não devem ser escritos em logs.
 
-`GET /instance/connect/:instanceName` returns the first WhatsApp QR code as raw code plus a `data:image/png;base64,...` PNG generated with the configured QR colors. The pairing process continues after the HTTP response and uses `WHATSAPP_PAIRING_TIMEOUT` as the total context deadline.
+`GET /instance/connect/:instanceName` retorna o primeiro QR code do WhatsApp como código bruto mais um PNG `data:image/png;base64,...` gerado com as cores de QR configuradas. O processo de pareamento continua depois da resposta HTTP e usa `WHATSAPP_PAIRING_TIMEOUT` como deadline total do contexto.
 
-`GET /instance/connect/:instanceName/code/:phoneNumber` returns the exact pairing code from Whatsmeow. Phone numbers are normalized to digits before calling Whatsmeow.
+`GET /instance/connect/:instanceName/code/:phoneNumber` retorna exatamente o código de pareamento do Whatsmeow. Números de telefone são normalizados para dígitos antes de chamar o Whatsmeow.
 
-Both connection endpoints require the instance bearer token stored in `Auth.token`; the global admin token is not accepted.
+Os dois endpoints de conexão exigem o bearer token da instância armazenado em `Auth.token`; o token global de admin não é aceito.
 
-`CONFIG_SESSION_PHONE_CLIENT` and `CONFIG_SESSION_PHONE_NAME` are applied once during startup before the Whatsmeow SQL Store and clients are created. They affect new links only. Existing linked devices are not deleted, logged out, or rewritten automatically; to see a new label, disconnect the instance through the existing flow, remove the linked device on the phone, restart the app, generate a new QR code, and link again.
+`CONFIG_SESSION_PHONE_CLIENT` e `CONFIG_SESSION_PHONE_NAME` são aplicados uma vez durante a inicialização, antes da criação do SQL Store e dos clientes do Whatsmeow. Eles afetam somente novos vínculos. Dispositivos já vinculados não são apagados, deslogados nem reescritos automaticamente; para ver um novo rótulo, desconecte a instância pelo fluxo existente, remova o dispositivo vinculado no telefone, reinicie a aplicação, gere um novo QR code e vincule novamente.

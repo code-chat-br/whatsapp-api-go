@@ -1,38 +1,38 @@
 # Pareamento por Passkey no WhatsApp
 
-Este documento descreve o suporte da API ao pareamento de contas WhatsApp que exigem Passkey durante o fluxo de conexao com `whatsmeow`.
+Este documento descreve o suporte da API ao pareamento de contas WhatsApp que exigem Passkey durante o fluxo de conexão com `whatsmeow`.
 
-O worker Go continua sendo o proprietario do cliente WhatsApp. A extensao do navegador sera configurada separadamente e nao faz parte deste fluxo de API.
+O worker Go continua sendo o proprietário do cliente WhatsApp. A extensão do navegador será configurada separadamente e não faz parte deste fluxo de API.
 
 ## Objetivo
 
-Algumas contas do WhatsApp exigem uma assertion WebAuthn antes de permitir a vinculacao de um novo dispositivo. Como o worker e headless, ele busca o challenge com o `whatsmeow`, entrega esse challenge ao painel, recebe a assertion produzida no navegador do dono da conta e envia a resposta de volta pelo mesmo `*whatsmeow.Client`.
+Algumas contas do WhatsApp exigem uma assertion WebAuthn antes de permitir a vinculação de um novo dispositivo. Como o worker é headless, ele busca o challenge com o `whatsmeow`, entrega esse challenge ao painel, recebe a assertion produzida no navegador do dono da conta e envia a resposta de volta pelo mesmo `*whatsmeow.Client`.
 
-O challenge e a assertion sao efemeros:
+O challenge e a assertion são efêmeros:
 
-- nao sao persistidos no banco;
-- nao sao enviados para webhooks externos;
-- nao devem aparecer em logs;
+- não são persistidos no banco;
+- não são enviados para webhooks externos;
+- não devem aparecer em logs;
 - a assertion aceita para processamento consome o challenge.
 
-## Pre-requisitos
+## Pré-requisitos
 
-- A instancia deve existir e estar ativa.
-- A requisicao deve usar o token bearer da propria instancia.
-- Deve haver uma sessao de pareamento QR ativa para a instancia.
-- O cliente WhatsApp precisa estar conectado e ainda nao logado.
+- A instância deve existir e estar ativa.
+- A requisição deve usar o token bearer da própria instância.
+- Deve haver uma sessão de pareamento QR ativa para a instância.
+- O cliente WhatsApp precisa estar conectado e ainda não logado.
 - O mesmo processo precisa receber o challenge e a assertion, porque o cache interno de Passkey fica dentro do objeto `*whatsmeow.Client`.
 
 ## Endpoints
 
-| Metodo | Caminho | Descricao |
+| Método | Caminho | Descrição |
 | --- | --- | --- |
-| `POST` | `/instance/connect/:instanceName/passkey/challenge` | Retorna ou cria um challenge WebAuthn para a sessao de pareamento ativa. |
+| `POST` | `/instance/connect/:instanceName/passkey/challenge` | Retorna ou cria um challenge WebAuthn para a sessão de pareamento ativa. |
 | `POST` | `/instance/connect/:instanceName/passkey/assertion` | Recebe a assertion WebAuthn e envia para o WhatsApp. |
 
-## Headers
+## Cabeçalhos
 
-| Header | Obrigatorio | Valor |
+| Cabeçalho | Obrigatório | Valor |
 | --- | --- | --- |
 | `Authorization` | Sim | `Bearer <instance-token>` |
 | `Content-Type` | Sim para assertion | `application/json` |
@@ -68,7 +68,7 @@ Resposta `200 OK`:
 }
 ```
 
-Se ja existir um challenge valido e nao consumido, o endpoint retorna o mesmo `requestId` e o mesmo `publicKey`. Isso evita multiplos challenges por clique duplicado.
+Se já existir um challenge válido e não consumido, o endpoint retorna o mesmo `requestId` e o mesmo `publicKey`. Isso evita múltiplos challenges por clique duplicado.
 
 ## Enviar assertion
 
@@ -78,7 +78,7 @@ Authorization: Bearer <instance-token>
 Content-Type: application/json
 ```
 
-Body:
+Corpo:
 
 ```json
 {
@@ -106,7 +106,7 @@ Resposta `202 Accepted`:
 }
 ```
 
-O resultado final continua chegando pelo QR channel do `whatsmeow`: confirmacao de Passkey, `PairSuccess` e conexao online.
+O resultado final continua chegando pelo QR channel do `whatsmeow`: confirmação de Passkey, `PairSuccess` e conexão online.
 
 ## Estados
 
@@ -114,11 +114,11 @@ O resultado final continua chegando pelo QR channel do `whatsmeow`: confirmacao 
 | --- | --- |
 | `IDLE` | Nenhum fluxo de Passkey ativo. |
 | `FETCHING_CHALLENGE` | Worker buscando challenge no WhatsApp. |
-| `AWAITING_ASSERTION` | Challenge disponivel, aguardando assertion do navegador. |
+| `AWAITING_ASSERTION` | Challenge disponível, aguardando assertion do navegador. |
 | `SUBMITTING_ASSERTION` | Assertion validada localmente e sendo enviada ao WhatsApp. |
-| `AWAITING_CONFIRMATION` | WhatsApp recebeu a assertion e pode exigir aprovacao no telefone. |
+| `AWAITING_CONFIRMATION` | WhatsApp recebeu a assertion e pode exigir aprovação no telefone. |
 | `CONFIRMATION_SENT` | Worker enviou `SendPasskeyConfirmation`. |
-| `COMPLETED` | Pareamento concluido. |
+| `COMPLETED` | Pareamento concluído. |
 | `FAILED` | Pareamento por Passkey falhou. |
 | `EXPIRED` | Challenge expirou antes do uso. |
 
@@ -134,7 +134,7 @@ O envelope segue o padrao atual da API:
 }
 ```
 
-| HTTP | Codigo |
+| HTTP | Código |
 | --- | --- |
 | `404` | `PAIRING_SESSION_NOT_FOUND` |
 | `409` | `PAIRING_SESSION_NOT_ACTIVE` |
@@ -148,39 +148,39 @@ O envelope segue o padrao atual da API:
 | `503` | `WHATSAPP_CLIENT_NOT_CONNECTED` |
 | `503` | `PASSKEY_SERVICE_UNAVAILABLE` |
 
-## Sequencia do fluxo
+## Sequência do fluxo
 
 1. O painel inicia o fluxo existente de QR Code.
 2. O worker cria o `*whatsmeow.Client`, chama `GetQRChannel` e conecta.
-3. Quando o WhatsApp exige Passkey, o QR channel pode emitir `passkey-request`; se isso nao acontecer, o painel chama o endpoint de challenge.
+3. Quando o WhatsApp exige Passkey, o QR channel pode emitir `passkey-request`; se isso não acontecer, o painel chama o endpoint de challenge.
 4. O endpoint de challenge usa o mesmo `ManagedWhatsAppClient` e chama `DangerousInternals().GetPasskeyRequestOptions`.
 5. O painel entrega `publicKey` para a extensao do navegador.
-6. A extensao roda WebAuthn em `web.whatsapp.com` e devolve a assertion ao painel.
+6. A extensão roda WebAuthn em `web.whatsapp.com` e devolve a assertion ao painel.
 7. O painel envia a assertion para `/passkey/assertion`.
-8. O worker valida `requestId`, estado, expiracao e uso unico, marca o challenge como consumido e chama `SendPasskeyResponse`.
-9. O QR channel recebe `passkey-confirmation`. Se `SkipHandoffUX` for `false`, o worker chama `SendPasskeyConfirmation`; se for `true`, o proprio QR channel do `whatsmeow` ja confirmou.
-10. O WhatsApp emite sucesso e o fluxo existente publica a instancia online.
+8. O worker valida `requestId`, estado, expiração e uso único, marca o challenge como consumido e chama `SendPasskeyResponse`.
+9. O QR channel recebe `passkey-confirmation`. Se `SkipHandoffUX` for `false`, o worker chama `SendPasskeyConfirmation`; se for `true`, o próprio QR channel do `whatsmeow` já confirmou.
+10. O WhatsApp emite sucesso e o fluxo existente publica a instância online.
 
 ## Base64url
 
 Os campos `challenge`, `allowCredentials[].id`, `rawId`, `clientDataJSON`, `authenticatorData`, `signature` e `userHandle` usam base64url sem padding.
 
-Nao converter para base64 padrao, nao adicionar `=`, nao trocar `-` por `+`, nao trocar `_` por `/` e nao decodificar/recodificar no painel. A API desserializa a assertion diretamente para `go.mau.fi/whatsmeow/types.WebAuthnResponse`.
+Não converter para base64 padrão, não adicionar `=`, não trocar `-` por `+`, não trocar `_` por `/` e não decodificar/recodificar no painel. A API desserializa a assertion diretamente para `go.mau.fi/whatsmeow/types.WebAuthnResponse`.
 
 ## Mesmo cliente
 
-Challenge, assertion e confirmacao precisam usar o mesmo `*whatsmeow.Client` que iniciou o QR channel. O `whatsmeow` mantem cache efemero dentro desse objeto durante o pareamento.
+Challenge, assertion e confirmação precisam usar o mesmo `*whatsmeow.Client` que iniciou o QR channel. O `whatsmeow` mantém cache efêmero dentro desse objeto durante o pareamento.
 
-Nao ha endpoint manual de confirmacao. A confirmacao pertence ao worker que possui o cliente.
+Não há endpoint manual de confirmação. A confirmação pertence ao worker que possui o cliente.
 
-## Multiplas replicas
+## Múltiplas réplicas
 
-Este fluxo esta correto para execucao single-node ou para ambientes onde a instancia e roteada sempre para o node proprietario do `ManagedWhatsAppClient`.
+Este fluxo está correto para execução single-node ou para ambientes onde a instância é roteada sempre para o node proprietário do `ManagedWhatsAppClient`.
 
-Se o challenge for criado no node A e a assertion for enviada ao node B, o pareamento falhara, porque o node B nao possui o cache interno do `*whatsmeow.Client`. Redis ou banco de dados nao resolvem isso por si so, e o cache nao deve ser serializado.
+Se o challenge for criado no node A e a assertion for enviada ao node B, o pareamento falhará, porque o node B não possui o cache interno do `*whatsmeow.Client`. Redis ou banco de dados não resolvem isso por si só, e o cache não deve ser serializado.
 
-Em ambientes com multiplas replicas, use afinidade/ownership por instancia para garantir que os dois endpoints de Passkey cheguem ao mesmo processo.
+Em ambientes com múltiplas réplicas, use afinidade/ownership por instância para garantir que os dois endpoints de Passkey cheguem ao mesmo processo.
 
-## Extensao
+## Extensão
 
-A extensao do navegador nao e instalada nem configurada por esta API. Ela deve apenas receber o `publicKey`, executar `navigator.credentials.get` no contexto correto e devolver a assertion sem transformar os campos base64url.
+A extensão do navegador não é instalada nem configurada por esta API. Ela deve apenas receber o `publicKey`, executar `navigator.credentials.get` no contexto correto e devolver a assertion sem transformar os campos base64url.

@@ -1,14 +1,14 @@
-# Send messages
+# Envio de mensagens
 
-This document describes all `/message` sending endpoints and the `options.mentionAll` feature.
+Este documento descreve todos os endpoints de envio em `/message` e o recurso `options.mentionAll`.
 
-All routes require the instance bearer token:
+Todas as rotas exigem o bearer token da instância:
 
 ```http
 Authorization: Bearer <instance-token>
 ```
 
-Available routes:
+Rotas disponíveis:
 
 ```text
 POST /message/sendText/:instanceName
@@ -24,7 +24,7 @@ POST /message/sendReaction/:instanceName
 
 ## MessageOptions
 
-`MessageOptions` is optional. When `mentionAll` is absent or `false`, the send remains synchronous and returns the persisted message with `200 OK`.
+`MessageOptions` é opcional. Quando `mentionAll` está ausente ou é `false`, o envio continua síncrono e retorna a mensagem persistida com `200 OK`.
 
 ```json
 {
@@ -45,19 +45,19 @@ POST /message/sendReaction/:instanceName
 }
 ```
 
-`delay`: optional integer in milliseconds. General message sends accept up to `120000`. WhatsApp audio sends accept up to `300000`.
+`delay`: inteiro opcional em milissegundos. Envios gerais de mensagem aceitam até `120000`. Envios de áudio do WhatsApp aceitam até `300000`.
 
-`presence`: optional string. Text, link, media, contact and location accept `composing`. Audio/PTV accepts `recording`. WhatsApp audio also accepts `paused`.
+`presence`: string opcional. Texto, link, mídia, contato e localização aceitam `composing`. Áudio/PTV aceita `recording`. Áudio do WhatsApp também aceita `paused`.
 
-`quotedMessageId`: optional internal message id to quote. The message must belong to the same instance.
+`quotedMessageId`: id interno opcional da mensagem a ser citada. A mensagem precisa pertencer à mesma instância.
 
-`quotedMessage`: optional quoted message snapshot with `keyId`, `keyRemoteJid`, `messageType`, and `content`.
+`quotedMessage`: snapshot opcional da mensagem citada com `keyId`, `keyRemoteJid`, `messageType` e `content`.
 
-`externalAttributes`: optional object copied into persisted message metadata and asynchronous `mentionAll` result webhooks.
+`externalAttributes`: objeto opcional copiado para os metadados da mensagem persistida e para os webhooks de resultado assíncrono de `mentionAll`.
 
-`mentionAll`: optional boolean. When `true`, the recipient must be a group JID and the message is accepted for asynchronous processing when the WhatsApp protobuf message type supports `ContextInfo`.
+`mentionAll`: booleano opcional. Quando `true`, o destinatário precisa ser um JID de grupo e a mensagem é aceita para processamento assíncrono quando o tipo da mensagem protobuf do WhatsApp suporta `ContextInfo`.
 
-## Endpoint Bodies
+## Bodies dos endpoints
 
 ### sendText
 
@@ -80,7 +80,7 @@ Content-Type: application/json
 }
 ```
 
-Supports `mentionAll`.
+Suporta `mentionAll`.
 
 ### sendLink
 
@@ -104,7 +104,7 @@ Content-Type: application/json
 }
 ```
 
-Supports `mentionAll`.
+Suporta `mentionAll`.
 
 ### sendMedia
 
@@ -128,7 +128,7 @@ Content-Type: application/json
 }
 ```
 
-`mediatype` accepts `image`, `document`, `video`, `audio`, and `ptv`. Supports `mentionAll`.
+`mediatype` aceita `image`, `document`, `video`, `audio` e `ptv`. Suporta `mentionAll`.
 
 ### sendMediaFile
 
@@ -137,7 +137,7 @@ POST /message/sendMediaFile/codechat
 Content-Type: multipart/form-data
 ```
 
-Multipart fields:
+Campos multipart:
 
 ```json
 {
@@ -153,7 +153,7 @@ Multipart fields:
 }
 ```
 
-`attachment` is the file field. `mediaType` accepts `image`, `document`, `video`, `audio`, and `ptv`. Supports `mentionAll`.
+`attachment` é o campo do arquivo. `mediaType` aceita `image`, `document`, `video`, `audio` e `ptv`. Suporta `mentionAll`.
 
 ### sendWhatsAppAudio
 
@@ -174,7 +174,7 @@ Content-Type: application/json
 }
 ```
 
-Downloads audio, converts/prepares it as WhatsApp PTT audio, and sends an `audioMessage`. Supports `mentionAll`.
+Baixa o áudio, converte/prepara como áudio PTT do WhatsApp e envia um `audioMessage`. Suporta `mentionAll`.
 
 ### sendWhatsAppAudioFile
 
@@ -183,7 +183,7 @@ POST /message/sendWhatsAppAudioFile/codechat
 Content-Type: multipart/form-data
 ```
 
-Multipart fields:
+Campos multipart:
 
 ```json
 {
@@ -197,7 +197,7 @@ Multipart fields:
 }
 ```
 
-`attachment` is the audio file field. Supports `mentionAll`.
+`attachment` é o campo do arquivo de áudio. Suporta `mentionAll`.
 
 ### sendContact
 
@@ -225,7 +225,7 @@ Content-Type: application/json
 }
 ```
 
-`contactMessage` accepts one or more contacts. If `vcard` is omitted, the service generates one from `fullName`, `wuid`, `phoneNumber`, and `organization`. Supports `mentionAll`.
+`contactMessage` aceita um ou mais contatos. Se `vcard` for omitido, o serviço gera um a partir de `fullName`, `wuid`, `phoneNumber` e `organization`. Suporta `mentionAll`.
 
 ### sendLocation
 
@@ -250,7 +250,7 @@ Content-Type: application/json
 }
 ```
 
-Supports `mentionAll`.
+Suporta `mentionAll`.
 
 ### sendReaction
 
@@ -272,20 +272,20 @@ Content-Type: application/json
 }
 ```
 
-Does not support `mentionAll` because `ReactionMessage` targets an existing message and has no valid `ContextInfo.MentionedJID` field. If `options.mentionAll=true`, the API returns `400 Bad Request` with code `MENTION_ALL_NOT_SUPPORTED_FOR_MESSAGE_TYPE`.
+Não suporta `mentionAll` porque `ReactionMessage` aponta para uma mensagem existente e não tem um campo `ContextInfo.MentionedJID` válido. Se `options.mentionAll=true`, a API retorna `400 Bad Request` com o código `MENTION_ALL_NOT_SUPPORTED_FOR_MESSAGE_TYPE`.
 
-## Success Responses
+## Respostas de sucesso
 
-Synchronous sends:
+Envios síncronos:
 
 ```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 ```
 
-The response body is the persisted message row returned by the message service. The existing `send.message` webhook is dispatched after persistence.
+O corpo da resposta é a linha de mensagem persistida retornada pelo serviço de mensagens. O webhook existente `send.message` é disparado depois da persistência.
 
-Asynchronous `mentionAll` sends:
+Envios assíncronos com `mentionAll`:
 
 ```http
 HTTP/1.1 202 Accepted
@@ -302,13 +302,13 @@ Content-Type: application/json
 }
 ```
 
-`202 Accepted` means only that the bounded queue accepted the job. The final result is delivered by the existing `send.message` webhook and correlated by `processId`.
+`202 Accepted` significa apenas que a fila limitada aceitou o job. O resultado final é entregue pelo webhook existente `send.message` e correlacionado por `processId`.
 
-## Ghost mention
+## Menção invisível
 
-`mentionAll=true` mentions all current group participants by filling WhatsApp `ContextInfo.MentionedJID`. The server does not add visible `@phone` markers to text, captions, contact cards, locations, or media bodies.
+`mentionAll=true` menciona todos os participantes atuais do grupo preenchendo `ContextInfo.MentionedJID` do WhatsApp. O servidor não adiciona marcadores visíveis `@phone` ao texto, legendas, cartões de contato, localizações ou corpos de mídia.
 
-Supported endpoints:
+Endpoints suportados:
 
 ```text
 sendText
@@ -321,23 +321,23 @@ sendContact
 sendLocation
 ```
 
-Unsupported endpoints:
+Endpoints não suportados:
 
 ```text
 sendReaction
 ```
 
-The participant list is fetched when the worker processes the job. Participants who join after that fetch are not mentioned. Participants who leave during processing may still be present in the fetched list.
+A lista de participantes é buscada quando o worker processa o job. Participantes que entrarem depois dessa busca não serão mencionados. Participantes que saírem durante o processamento ainda podem estar presentes na lista buscada.
 
-## Webhook result
+## Resultado por webhook
 
-The existing webhook event is reused:
+O evento de webhook existente é reutilizado:
 
 ```text
 send.message
 ```
 
-Success example:
+Exemplo de sucesso:
 
 ```json
 {
@@ -367,7 +367,7 @@ Success example:
 }
 ```
 
-Failure example:
+Exemplo de falha:
 
 ```json
 {
@@ -395,7 +395,7 @@ Failure example:
 }
 ```
 
-Implemented asynchronous webhook error codes:
+Códigos de erro implementados para webhooks assíncronos:
 
 ```text
 INSTANCE_NOT_CONNECTED
@@ -405,9 +405,9 @@ MESSAGE_SEND_FAILED
 GROUP_MENTION_PROCESSING_FAILED
 ```
 
-## HTTP errors
+## Erros HTTP
 
-Recipient is not a group:
+O destinatário não é um grupo:
 
 ```json
 {
@@ -420,7 +420,7 @@ Recipient is not a group:
 }
 ```
 
-Message type does not support `mentionAll`:
+O tipo de mensagem não suporta `mentionAll`:
 
 ```json
 {
@@ -433,7 +433,7 @@ Message type does not support `mentionAll`:
 }
 ```
 
-Queue is full:
+A fila está cheia:
 
 ```json
 {
@@ -446,7 +446,7 @@ Queue is full:
 }
 ```
 
-Processor is stopped or unavailable:
+O processador está parado ou indisponível:
 
 ```json
 {
@@ -459,15 +459,15 @@ Processor is stopped or unavailable:
 }
 ```
 
-Other validation, auth, instance, media, upload, persistence, and WhatsApp connection errors keep the API standard error envelope.
+Outros erros de validação, autenticação, instância, mídia, upload, persistência e conexão com o WhatsApp mantêm o envelope padrão de erro da API.
 
-## Queue behavior
+## Comportamento da fila
 
-Asynchronous sends use a bounded in-memory queue managed by `MessageProcessingManager`. The worker count and queue size are fixed at startup. If the queue is full, the request receives `503` and no job is accepted.
+Envios assíncronos usam uma fila limitada em memória gerenciada por `MessageProcessingManager`. A quantidade de workers e o tamanho da fila são fixados na inicialização. Se a fila estiver cheia, a requisição recebe `503` e nenhum job é aceito.
 
-Workers are tracked with a `sync.WaitGroup`. Shutdown stops accepting new jobs, closes the queue, waits for workers, and cancels processing through the application lifecycle context when the shutdown deadline is reached.
+Workers são rastreados com um `sync.WaitGroup`. O shutdown para de aceitar novos jobs, fecha a fila, espera os workers e cancela o processamento pelo contexto de ciclo de vida da aplicação quando o deadline de shutdown é atingido.
 
-## Environment variables
+## Variáveis de ambiente
 
 ```env
 MESSAGE_PROCESSING_WORKERS="4"
@@ -477,35 +477,35 @@ MESSAGE_GROUP_INFO_TIMEOUT="30s"
 MESSAGE_SEND_TIMEOUT="30s"
 ```
 
-## Processing flow
+## Fluxo de processamento
 
 ```text
-1. The client sends a compatible message with options.mentionAll=true.
-2. The API validates authentication, instance, payload and recipient.
-3. The API confirms the recipient is a group JID.
-4. The API creates processId.
-5. The job is submitted to the bounded queue.
-6. The API returns HTTP 202 Accepted.
-7. A worker reloads the instance and connected WhatsApp client.
-8. The worker fetches current group participants.
-9. Participant JIDs are deduplicated and added to ContextInfo.MentionedJID.
-10. The original visible message body is preserved.
-11. The message is sent through whatsmeow.
-12. The final result is published through the send.message webhook.
+1. O cliente envia uma mensagem compatível com options.mentionAll=true.
+2. A API valida autenticação, instância, payload e destinatário.
+3. A API confirma que o destinatário é um JID de grupo.
+4. A API cria processId.
+5. O job é enviado para a fila limitada.
+6. A API retorna HTTP 202 Accepted.
+7. Um worker recarrega a instância e o cliente WhatsApp conectado.
+8. O worker busca os participantes atuais do grupo.
+9. Os JIDs dos participantes são deduplicados e adicionados a ContextInfo.MentionedJID.
+10. O corpo visível original da mensagem é preservado.
+11. A mensagem é enviada pelo whatsmeow.
+12. O resultado final é publicado pelo webhook send.message.
 ```
 
-## Known limitations
+## Limitações conhecidas
 
-`mentionAll` works only for group JIDs with server `g.us`.
+`mentionAll` funciona somente para JIDs de grupo com servidor `g.us`.
 
-The server does not add visible `@phone` markers.
+O servidor não adiciona marcadores visíveis `@phone`.
 
-`sendReaction` rejects `mentionAll` because reactions do not carry a valid message-level `ContextInfo`.
+`sendReaction` rejeita `mentionAll` porque reações não carregam um `ContextInfo` válido no nível da mensagem.
 
-Very large groups may increase processing time.
+Grupos muito grandes podem aumentar o tempo de processamento.
 
-`202 Accepted` confirms only that the job entered the queue.
+`202 Accepted` confirma apenas que o job entrou na fila.
 
-The webhook is the source of the final result.
+O webhook é a fonte do resultado final.
 
-WhatsApp clients may display or notify ghost mentions differently.
+Clientes WhatsApp podem exibir ou notificar menções invisíveis de formas diferentes.
