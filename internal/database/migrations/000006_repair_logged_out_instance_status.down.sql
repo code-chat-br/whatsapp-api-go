@@ -1,0 +1,2 @@
+-- This data repair is intentionally irreversible: restoring OFFLINE would
+-- recreate the invalid state that prevents a logged-out instance from reconnecting.

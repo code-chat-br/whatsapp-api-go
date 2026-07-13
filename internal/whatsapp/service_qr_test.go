@@ -215,6 +215,8 @@ func (r *fakeInstanceRepository) CreateTx(context.Context, *db.Queries, types.Cr
 	return types.InstanceWithAuth{}, nil
 }
 func (r *fakeInstanceRepository) FindByName(context.Context, string) (types.InstanceWithAuth, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.findErr != nil {
 		return types.InstanceWithAuth{}, r.findErr
 	}
@@ -241,7 +243,11 @@ func (r *fakeInstanceRepository) List(context.Context) ([]types.InstanceWithAuth
 func (r *fakeInstanceRepository) Update(context.Context, int32, types.UpdateInstanceInput) (types.InstanceWithAuth, error) {
 	return types.InstanceWithAuth{}, nil
 }
-func (r *fakeInstanceRepository) UpdateStatus(context.Context, int32, types.InstanceStatus) error {
+
+func (r *fakeInstanceRepository) UpdateStatus(_ context.Context, _ int32, status types.InstanceStatus) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.found.Instance.Status = status
 	return nil
 }
 func (r *fakeInstanceRepository) UpdateConnectionState(_ context.Context, input types.UpdateConnectionStateInput) error {

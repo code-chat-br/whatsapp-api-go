@@ -1,6 +1,7 @@
 package whatsapp
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -11,6 +12,41 @@ import (
 
 	"whatsapp-go-api/internal/database/types"
 )
+
+func TestLogoutKeepsInstanceActiveForReconnect(t *testing.T) {
+	repo := &fakeInstanceRepository{
+		found: types.InstanceWithAuth{
+			Instance: types.Instance{
+				ID:               1,
+				Name:             "codechat",
+				Status:           types.InstanceStatusOnline,
+				ConnectionStatus: types.InstanceConnectionStatusOnline,
+			},
+			Auth: &types.Auth{Token: "token"},
+		},
+	}
+	svc := &Service{
+		instances: repo,
+		hub:       NewClientHub(),
+		lock:      &fakeConnectionLock{},
+		logger:    zerolog.Nop(),
+	}
+
+	if _, err := svc.Logout(context.Background(), "codechat", "token"); err != nil {
+		t.Fatalf("Logout() error = %v", err)
+	}
+
+	instance, err := svc.authenticateInstance(context.Background(), "codechat", "token")
+	if err != nil {
+		t.Fatalf("expected instance to remain authorized for reconnect, got %v", err)
+	}
+	if instance.Instance.Status != types.InstanceStatusOnline {
+		t.Fatalf("expected base instance status ONLINE after logout, got %s", instance.Instance.Status)
+	}
+	if got := repo.lastStatus(); got != types.InstanceConnectionStatusLoggedOut {
+		t.Fatalf("expected WhatsApp connection status logged_out, got %s", got)
+	}
+}
 
 func TestManagedConnectionStatusDistinguishesSessionPresence(t *testing.T) {
 	if got := managedConnectionStatus(nil); got != types.InstanceConnectionStatusSessionMissing {

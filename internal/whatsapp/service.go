@@ -869,7 +869,6 @@ func (s *Service) logoutInstance(ctx context.Context, item types.Instance) error
 	if err := s.instances.ClearWhatsAppDevice(ctx, item.ID); err != nil && !errors.Is(err, repository.ErrInstanceNotFound) {
 		return err
 	}
-	_ = s.instances.UpdateStatus(ctx, item.ID, types.InstanceStatusOffline)
 	return nil
 }
 
