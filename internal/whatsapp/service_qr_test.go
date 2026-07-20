@@ -206,6 +206,7 @@ type fakeInstanceRepository struct {
 	updates []types.UpdateConnectionStateInput
 	found   types.InstanceWithAuth
 	findErr error
+	deleted bool
 }
 
 func (r *fakeInstanceRepository) Create(context.Context, types.CreateInstanceInput) (types.InstanceWithAuth, error) {
@@ -268,7 +269,12 @@ func (r *fakeInstanceRepository) TryAcquireConnectionLock(context.Context, strin
 }
 func (r *fakeInstanceRepository) ReleaseConnectionLock(context.Context, string) error { return nil }
 func (r *fakeInstanceRepository) EnsureDeletable(context.Context, int32) error        { return nil }
-func (r *fakeInstanceRepository) Delete(context.Context, int32, bool) error           { return nil }
+func (r *fakeInstanceRepository) Delete(context.Context, int32, bool) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.deleted = true
+	return nil
+}
 
 func (r *fakeInstanceRepository) lastStatus() types.InstanceConnectionStatus {
 	r.mu.Lock()

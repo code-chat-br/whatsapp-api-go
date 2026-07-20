@@ -77,6 +77,40 @@ func TestAuthenticateInstanceRepairsLoggedOutInactiveInstance(t *testing.T) {
 	}
 }
 
+func TestDeleteInstanceRepairsLoggedOutInactiveInstance(t *testing.T) {
+	repo := &fakeInstanceRepository{
+		found: types.InstanceWithAuth{
+			Instance: types.Instance{
+				ID:               1,
+				Name:             "codechat",
+				Status:           types.InstanceStatusOffline,
+				ConnectionStatus: types.InstanceConnectionStatusLoggedOut,
+			},
+			Auth: &types.Auth{Token: "token"},
+		},
+	}
+	svc := &Service{
+		instances: repo,
+		hub:       NewClientHub(),
+		lock:      &fakeConnectionLock{},
+		logger:    zerolog.Nop(),
+	}
+
+	result, err := svc.DeleteInstance(context.Background(), "codechat", "token", false)
+	if err != nil {
+		t.Fatalf("DeleteInstance() error = %v", err)
+	}
+	if !result.Deleted || result.InstanceName != "codechat" {
+		t.Fatalf("unexpected delete result %#v", result)
+	}
+	if repo.found.Instance.Status != types.InstanceStatusOnline {
+		t.Fatalf("expected repository status ONLINE, got %s", repo.found.Instance.Status)
+	}
+	if !repo.deleted {
+		t.Fatal("expected repository delete to be called")
+	}
+}
+
 func TestManagedConnectionStatusDistinguishesSessionPresence(t *testing.T) {
 	if got := managedConnectionStatus(nil); got != types.InstanceConnectionStatusSessionMissing {
 		t.Fatalf("nil managed status = %s", got)
