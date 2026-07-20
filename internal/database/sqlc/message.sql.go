@@ -611,6 +611,109 @@ func (q *Queries) ListMessagesNext(ctx context.Context, arg ListMessagesNextPara
 	return items, nil
 }
 
+const listMessagesPage = `-- name: ListMessagesPage :many
+SELECT id, "keyId", "keyRemoteJid", "keyLid", "keyFromMe", "keyParticipant", "keyParticipantLid", "pushName", "messageType", content, "messageTimestamp", device, "isGroup", "instanceId", metadata
+FROM "Message" m
+WHERE m."instanceId" = $1
+  AND (NOT $2::boolean OR m."keyId" = $3)
+  AND (NOT $4::boolean OR m."keyRemoteJid" = $5)
+  AND (NOT $6::boolean OR m."keyFromMe" = $7)
+  AND (NOT $8::boolean OR m."messageType" = $9)
+  AND (NOT $10::boolean OR m."device" = $11)
+  AND (NOT $12::boolean OR m."messageTimestamp" >= $13)
+  AND (NOT $14::boolean OR m."messageTimestamp" <= $15)
+  AND (
+      NOT $16::boolean
+      OR EXISTS (
+          SELECT 1
+          FROM "MessageUpdate" mu
+          WHERE mu."messageId" = m."id"
+            AND mu."status" = $17
+      )
+  )
+ORDER BY m."id"
+LIMIT $19
+OFFSET $18
+`
+
+type ListMessagesPageParams struct {
+	Instanceid                int32         `json:"instanceid"`
+	Filterkeyid               bool          `json:"filterkeyid"`
+	Keyid                     string        `json:"keyid"`
+	Filterkeyremotejid        bool          `json:"filterkeyremotejid"`
+	Keyremotejid              pgtype.Text   `json:"keyremotejid"`
+	Filterkeyfromme           bool          `json:"filterkeyfromme"`
+	Keyfromme                 bool          `json:"keyfromme"`
+	Filtermessagetype         bool          `json:"filtermessagetype"`
+	Messagetype               string        `json:"messagetype"`
+	Filterdevice              bool          `json:"filterdevice"`
+	Device                    DeviceMessage `json:"device"`
+	Filtermessagetimestampgte bool          `json:"filtermessagetimestampgte"`
+	Messagetimestampgte       int32         `json:"messagetimestampgte"`
+	Filtermessagetimestamplte bool          `json:"filtermessagetimestamplte"`
+	Messagetimestamplte       int32         `json:"messagetimestamplte"`
+	Filtermessagestatus       bool          `json:"filtermessagestatus"`
+	Messagestatus             string        `json:"messagestatus"`
+	Offsetrows                int32         `json:"offsetrows"`
+	Limitcount                int32         `json:"limitcount"`
+}
+
+func (q *Queries) ListMessagesPage(ctx context.Context, arg ListMessagesPageParams) ([]Message, error) {
+	rows, err := q.db.Query(ctx, listMessagesPage,
+		arg.Instanceid,
+		arg.Filterkeyid,
+		arg.Keyid,
+		arg.Filterkeyremotejid,
+		arg.Keyremotejid,
+		arg.Filterkeyfromme,
+		arg.Keyfromme,
+		arg.Filtermessagetype,
+		arg.Messagetype,
+		arg.Filterdevice,
+		arg.Device,
+		arg.Filtermessagetimestampgte,
+		arg.Messagetimestampgte,
+		arg.Filtermessagetimestamplte,
+		arg.Messagetimestamplte,
+		arg.Filtermessagestatus,
+		arg.Messagestatus,
+		arg.Offsetrows,
+		arg.Limitcount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.KeyId,
+			&i.KeyRemoteJid,
+			&i.KeyLid,
+			&i.KeyFromMe,
+			&i.KeyParticipant,
+			&i.KeyParticipantLid,
+			&i.PushName,
+			&i.MessageType,
+			&i.Content,
+			&i.MessageTimestamp,
+			&i.Device,
+			&i.IsGroup,
+			&i.InstanceId,
+			&i.Metadata,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listMessagesPrevious = `-- name: ListMessagesPrevious :many
 SELECT id, "keyId", "keyRemoteJid", "keyLid", "keyFromMe", "keyParticipant", "keyParticipantLid", "pushName", "messageType", content, "messageTimestamp", device, "isGroup", "instanceId", metadata
 FROM "Message" m

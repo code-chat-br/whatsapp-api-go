@@ -182,6 +182,7 @@ func TestRegisterRoutesChatRoutesRequireBearer(t *testing.T) {
 		path   string
 	}{
 		{http.MethodPost, "/chat/whatsappNumbers/codechat"},
+		{http.MethodPost, "/chat/findMessages/codechat"},
 		{http.MethodPatch, "/chat/readMessages/codechat"},
 		{http.MethodPut, "/chat/archiveChat/codechat"},
 		{http.MethodDelete, "/chat/deleteMessage/codechat?id=1"},
@@ -311,6 +312,10 @@ func (routeChatService) CheckWhatsAppNumbers(context.Context, string, string, ch
 
 func (routeChatService) ReadMessages(context.Context, string, string, chat.ReadMessagesRequest) error {
 	return nil
+}
+
+func (routeChatService) FindMessages(context.Context, string, string, chat.FindMessagesRequest) (dbtypes.MessageListResult, error) {
+	return dbtypes.MessageListResult{}, nil
 }
 
 func (routeChatService) ArchiveChat(context.Context, string, string, chat.ArchiveChatRequest) error {

@@ -47,6 +47,24 @@ func TestInstanceDependenciesErrorUnwrap(t *testing.T) {
 	}
 }
 
+func TestMessageFilterParamsUseValidDeviceDefault(t *testing.T) {
+	count := countMessagesParams(1, types.MessageFilters{})
+	if count.Filterdevice {
+		t.Fatal("expected device filter to be disabled")
+	}
+	if count.Device != db.DeviceMessage(types.DeviceMessageUnknown) {
+		t.Fatalf("expected valid default device %q, got %q", types.DeviceMessageUnknown, count.Device)
+	}
+
+	page := listMessagesPageParams(1, 0, types.ListMessagesPageInput{Limit: 20, Page: 1})
+	if page.Filterdevice {
+		t.Fatal("expected page device filter to be disabled")
+	}
+	if page.Device != db.DeviceMessage(types.DeviceMessageUnknown) {
+		t.Fatalf("expected valid default page device %q, got %q", types.DeviceMessageUnknown, page.Device)
+	}
+}
+
 func TestRepositoriesWithPostgres(t *testing.T) {
 	databaseURL := os.Getenv("TEST_DATABASE_URL")
 	if databaseURL == "" {

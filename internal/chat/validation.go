@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	watypes "go.mau.fi/whatsmeow/types"
+
+	dbtypes "whatsapp-go-api/internal/database/types"
 )
 
 type ValidationError struct {
@@ -193,6 +195,44 @@ func validateReadMessages(input ReadMessagesRequest) error {
 		if strings.TrimSpace(id) == "" {
 			return ValidationError{Messages: []string{"messageIds must not contain empty items"}}
 		}
+	}
+	return nil
+}
+
+func validateFindMessages(input *FindMessagesRequest) error {
+	if input == nil {
+		return ValidationError{Messages: []string{"body is required"}}
+	}
+	if input.Offset == 0 {
+		input.Offset = DefaultFindMessagesLimit
+	}
+	if input.Page == 0 {
+		input.Page = 1
+	}
+	if input.Offset < 0 || input.Offset > MaxFindMessagesLimit {
+		return ValidationError{Messages: []string{fmt.Sprintf("offset must be between 1 and %d", MaxFindMessagesLimit)}}
+	}
+	if input.Page < 0 {
+		return ValidationError{Messages: []string{"page must be greater than 0"}}
+	}
+	if input.Where.ID != nil && *input.Where.ID <= 0 {
+		return ValidationError{Messages: []string{"where.id must be greater than 0"}}
+	}
+	if input.Where.Device != nil {
+		value := strings.TrimSpace(*input.Where.Device)
+		if device := dbtypes.DeviceMessage(value); value != "" && !device.IsValid() {
+			return ValidationError{Messages: []string{"where.device is invalid"}}
+		}
+	}
+	if input.Where.MessageTimestampGTE != nil && *input.Where.MessageTimestampGTE < 0 {
+		return ValidationError{Messages: []string{"where.messageTimestampGte must be greater than 0"}}
+	}
+	if input.Where.MessageTimestampLTE != nil && *input.Where.MessageTimestampLTE < 0 {
+		return ValidationError{Messages: []string{"where.messageTimestampLte must be greater than 0"}}
+	}
+	if input.Where.MessageTimestampGTE != nil && input.Where.MessageTimestampLTE != nil &&
+		*input.Where.MessageTimestampGTE > *input.Where.MessageTimestampLTE {
+		return ValidationError{Messages: []string{"where.messageTimestampGte must be less than where.messageTimestampLte"}}
 	}
 	return nil
 }

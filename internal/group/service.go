@@ -207,6 +207,14 @@ func (s *GroupService) authenticateInstance(ctx context.Context, instanceName st
 		return dbtypes.Instance{}, whatsapp.ErrInvalidInstanceToken
 	}
 	if instance.Instance.Status != dbtypes.InstanceStatusOnline {
+		if instance.Instance.ConnectionStatus == dbtypes.InstanceConnectionStatusLoggedOut {
+			active := dbtypes.InstanceStatusOnline
+			if err := s.instances.UpdateStatus(ctx, instance.Instance.ID, active); err != nil {
+				return dbtypes.Instance{}, err
+			}
+			instance.Instance.Status = active
+			return instance.Instance, nil
+		}
 		return dbtypes.Instance{}, whatsapp.ErrInstanceInactive
 	}
 	return instance.Instance, nil

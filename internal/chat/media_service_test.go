@@ -143,3 +143,7 @@ func (r *fakeMediaMessageRepository) Count(context.Context, int32, dbtypes.Messa
 func (r *fakeMediaMessageRepository) List(context.Context, int32, dbtypes.ListMessagesInput) (dbtypes.MessageListResult, error) {
 	return dbtypes.MessageListResult{}, nil
 }
+
+func (r *fakeMediaMessageRepository) ListPage(context.Context, int32, dbtypes.ListMessagesPageInput) (dbtypes.MessageListResult, error) {
+	return dbtypes.MessageListResult{}, nil
+}

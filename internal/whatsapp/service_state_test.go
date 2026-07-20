@@ -48,6 +48,35 @@ func TestLogoutKeepsInstanceActiveForReconnect(t *testing.T) {
 	}
 }
 
+func TestAuthenticateInstanceRepairsLoggedOutInactiveInstance(t *testing.T) {
+	repo := &fakeInstanceRepository{
+		found: types.InstanceWithAuth{
+			Instance: types.Instance{
+				ID:               1,
+				Name:             "codechat",
+				Status:           types.InstanceStatusOffline,
+				ConnectionStatus: types.InstanceConnectionStatusLoggedOut,
+			},
+			Auth: &types.Auth{Token: "token"},
+		},
+	}
+	svc := &Service{
+		instances: repo,
+		logger:    zerolog.Nop(),
+	}
+
+	instance, err := svc.authenticateInstance(context.Background(), "codechat", "token")
+	if err != nil {
+		t.Fatalf("authenticateInstance() error = %v", err)
+	}
+	if instance.Instance.Status != types.InstanceStatusOnline {
+		t.Fatalf("expected repaired instance status ONLINE, got %s", instance.Instance.Status)
+	}
+	if repo.found.Instance.Status != types.InstanceStatusOnline {
+		t.Fatalf("expected repository status ONLINE, got %s", repo.found.Instance.Status)
+	}
+}
+
 func TestManagedConnectionStatusDistinguishesSessionPresence(t *testing.T) {
 	if got := managedConnectionStatus(nil); got != types.InstanceConnectionStatusSessionMissing {
 		t.Fatalf("nil managed status = %s", got)

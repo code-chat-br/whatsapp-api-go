@@ -209,7 +209,7 @@ func Markdown(doc Document) (string, error) {
 	}
 	writeLine(&buffer, "")
 
-	return buffer.String(), nil
+	return strings.TrimRight(buffer.String(), "\n") + "\n", nil
 }
 
 func writeEvent(buffer *bytes.Buffer, event EventDoc) error {

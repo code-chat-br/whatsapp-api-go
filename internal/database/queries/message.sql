@@ -193,6 +193,30 @@ WHERE m."instanceId" = @instanceId
 ORDER BY m."id" DESC
 LIMIT @limitCount;
 
+-- name: ListMessagesPage :many
+SELECT *
+FROM "Message" m
+WHERE m."instanceId" = @instanceId
+  AND (NOT @filterKeyID::boolean OR m."keyId" = @keyId)
+  AND (NOT @filterKeyRemoteJid::boolean OR m."keyRemoteJid" = @keyRemoteJid)
+  AND (NOT @filterKeyFromMe::boolean OR m."keyFromMe" = @keyFromMe)
+  AND (NOT @filterMessageType::boolean OR m."messageType" = @messageType)
+  AND (NOT @filterDevice::boolean OR m."device" = @device)
+  AND (NOT @filterMessageTimestampGte::boolean OR m."messageTimestamp" >= @messageTimestampGte)
+  AND (NOT @filterMessageTimestampLte::boolean OR m."messageTimestamp" <= @messageTimestampLte)
+  AND (
+      NOT @filterMessageStatus::boolean
+      OR EXISTS (
+          SELECT 1
+          FROM "MessageUpdate" mu
+          WHERE mu."messageId" = m."id"
+            AND mu."status" = @messageStatus
+      )
+  )
+ORDER BY m."id"
+LIMIT @limitCount
+OFFSET @offsetRows;
+
 -- name: CountMessagesBeforeID :one
 SELECT count(*)
 FROM "Message" m

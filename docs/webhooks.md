@@ -6,7 +6,7 @@ Documentação técnica dos webhooks implementados no código executável atual.
 - [Visão geral](#visão-geral)
 - [Configuração](#configuração)
 - [Mapa de eventos](#mapa-de-eventos)
-- [Cabeçalhos HTTP](#cabeçalhos-http)
+- [Headers HTTP](#headers-http)
 - [Envelope padrão](#envelope-padrão)
 - [Estrutura da instância](#estrutura-da-instância)
 - [Entrega e tratamento de erros](#entrega-e-tratamento-de-erros)
@@ -127,14 +127,14 @@ Objeto de configuração da instância:
 | `statusInstance` | `status.instance` | Eventos de estado operacional ou avisos da instancia. |
 | `userAboutUpdated` | `user.about.update` | Atualizacao do recado/about de um usuario. |
 
-## Cabeçalhos HTTP
+## Headers HTTP
 
-| Cabeçalho | Exemplo | Descrição |
+| Header | Exemplo | Descrição |
 | --- | --- | --- |
 | `Content-Type` | `application/json` | Formato do payload. |
 | `User-Agent` | `CodeChat-Webhook/1.0` | Identifica o emissor do webhook. |
 | `x-request-id` | `UUID ou request id do contexto` | Id de rastreio da entrega; nao e uma chave de idempotencia garantida. |
-| `x-owner-jid` | `JID do proprietário ou string vazia` | Proprietário da instância quando disponível. |
+| `x-owner-jid` | `JID do owner ou string vazia` | Owner da instancia quando disponivel. |
 | `x-instance-name` | `Nome da instancia` | Nome publico da instancia. |
 | `x-instance-id` | `1` | Identificador numerico interno da instancia. |
 | `x-webhook-event` | `Nome externo do evento` | Mesmo valor do campo event no envelope. |
@@ -224,7 +224,7 @@ x-webhook-event: messages.upsert
 - Nao ha assinatura HMAC, header de autenticacao ou segredo compartilhado no emissor atual.
 - Use HTTPS, endpoints privados, allowlist de IP ou autenticacao no destino quando houver dados sensiveis.
 - O x-request-id serve para rastreio e correlacao; ele nao prova autenticidade e nao garante idempotencia.
-- Se a fila estiver cheia, `Dispatch` retorna `ErrWebhookQueueFull`; os chamadores atuais registram aviso e continuam o fluxo principal.
+- Se a fila estiver cheia, `Dispatch` retorna `ErrWebhookQueueFull`; os chamadores atuais registram warning e continuam o fluxo principal.
 - Durante shutdown, a fila é fechada e o processo aguarda os workers terminarem até o contexto de shutdown expirar.
 
 ## Eventos
@@ -255,7 +255,7 @@ Content-Type: application/json
 x-webhook-event: call.upsert
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -288,7 +288,7 @@ x-webhook-event: call.upsert
 
 - `chatId`: `string`, obrigatório, não aceita `null`. JID do chat da chamada.
 - `from`: `string`, obrigatório, não aceita `null`. JID de origem.
-- `callerPn`: `string | null`, obrigatório, aceita `null`. Número de telefone do chamador quando disponível.
+- `callerPn`: `string | null`, obrigatório, aceita `null`. Phone number do chamador quando disponivel.
 - `isGroup`: `boolean | null`, obrigatório, aceita `null`. Indica chamada em grupo quando o normalizador consegue inferir.
 - `groupJid`: `string | null`, obrigatório, aceita `null`. JID do grupo quando disponivel.
 - `id`: `string`, obrigatório, não aceita `null`. ID da chamada.
@@ -332,7 +332,7 @@ Content-Type: application/json
 x-webhook-event: chats.delete
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -390,7 +390,7 @@ Content-Type: application/json
 x-webhook-event: chats.updated
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -454,7 +454,7 @@ Content-Type: application/json
 x-webhook-event: connection.update
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -520,7 +520,7 @@ Content-Type: application/json
 x-webhook-event: contacts.update
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -552,7 +552,7 @@ x-webhook-event: contacts.update
 - `id`: `number`, obrigatório, não aceita `null`. ID interno do contato persistido.
 - `remoteJid`: `string`, obrigatório, não aceita `null`. JID remoto do contato.
 - `lid`: `string | null`, obrigatório, aceita `null`. LID do contato quando conhecido.
-- `pushName`: `string | null`, opcional, aceita `null`. Nome de exibição atualizado quando presente.
+- `pushName`: `string | null`, opcional, aceita `null`. Push name atualizado quando presente.
 - `businessName`: `string | null`, opcional, aceita `null`. Nome comercial atualizado quando presente.
 - `action`: `string`, obrigatório, não aceita `null`. Acao executada. Valores possíveis: `updated`.
 - `source`: `string`, obrigatório, não aceita `null`. Origem da alteracao. Valores possíveis: `pushName`, `businessName`.
@@ -594,7 +594,7 @@ Content-Type: application/json
 x-webhook-event: contacts.upsert
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -623,7 +623,7 @@ x-webhook-event: contacts.upsert
 - `id`: `number`, obrigatório, não aceita `null`. ID interno do contato persistido.
 - `remoteJid`: `string`, obrigatório, não aceita `null`. JID remoto do contato.
 - `lid`: `string | null`, obrigatório, aceita `null`. LID do contato quando conhecido.
-- `pushName`: `string | null`, obrigatório, aceita `null`. Nome de exibição salvo para o contato.
+- `pushName`: `string | null`, obrigatório, aceita `null`. Push name salvo para o contato.
 - `profilePicUrl`: `string | null`, obrigatório, aceita `null`. URL de foto do perfil quando conhecida.
 - `action`: `string`, obrigatório, não aceita `null`. Acao executada. Valores possíveis: `upserted`.
 
@@ -661,7 +661,7 @@ Content-Type: application/json
 x-webhook-event: groups.participants.update
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -695,7 +695,7 @@ x-webhook-event: groups.participants.update
 
 - `id`: `string`, obrigatório, não aceita `null`. JID do grupo.
 - `author`: `string`, obrigatório, não aceita `null`. JID do autor da alteracao; string vazia quando ausente.
-- `authorPn`: `string`, opcional, não aceita `null`. Número de telefone do autor quando disponível; omitido quando ausente.
+- `authorPn`: `string`, opcional, não aceita `null`. Phone number do autor quando disponivel; omitido quando ausente.
 - `participants`: `GroupParticipantWebhookData[]`, obrigatório, não aceita `null`. Participantes afetados.
 - `action`: `string`, obrigatório, não aceita `null`. Acao aplicada. Valores possíveis: `add`, `remove`, `promote`, `demote`.
 
@@ -733,7 +733,7 @@ Content-Type: application/json
 x-webhook-event: groups.update
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -765,18 +765,18 @@ x-webhook-event: groups.update
 - `partial.notify`: `string`, opcional, não aceita `null`. Nome de notificacao do grupo quando informado.
 - `partial.addressingMode`: `string`, opcional, não aceita `null`. Modo de enderecamento do grupo quando informado.
 - `partial.owner`: `string`, opcional, não aceita `null`. JID do owner quando informado.
-- `partial.ownerPn`: `string`, opcional, não aceita `null`. Número de telefone do proprietário quando informado.
-- `partial.ownerUsername`: `string`, opcional, não aceita `null`. Nome de usuário do proprietário quando informado.
+- `partial.ownerPn`: `string`, opcional, não aceita `null`. Phone number do owner quando informado.
+- `partial.ownerUsername`: `string`, opcional, não aceita `null`. Username do owner quando informado.
 - `partial.ownerCountryCode`: `string`, opcional, não aceita `null`. Codigo de pais do owner quando informado.
 - `partial.subjectOwner`: `string`, opcional, não aceita `null`. JID de quem definiu o subject quando informado.
-- `partial.subjectOwnerPn`: `string`, opcional, não aceita `null`. Número de telefone de quem definiu o subject quando informado.
-- `partial.subjectOwnerUsername`: `string`, opcional, não aceita `null`. Nome de usuário de quem definiu o subject quando informado.
+- `partial.subjectOwnerPn`: `string`, opcional, não aceita `null`. Phone number de quem definiu o subject quando informado.
+- `partial.subjectOwnerUsername`: `string`, opcional, não aceita `null`. Username de quem definiu o subject quando informado.
 - `partial.subjectTime`: `number`, opcional, não aceita `null`. Timestamp Unix do subject quando informado.
 - `partial.creation`: `number`, opcional, não aceita `null`. Timestamp Unix de criacao quando informado.
 - `partial.desc`: `string`, opcional, não aceita `null`. Descricao do grupo quando informada.
 - `partial.descOwner`: `string`, opcional, não aceita `null`. JID de quem definiu a descricao quando informado.
-- `partial.descOwnerPn`: `string`, opcional, não aceita `null`. Número de telefone de quem definiu a descricao quando informado.
-- `partial.descOwnerUsername`: `string`, opcional, não aceita `null`. Nome de usuário de quem definiu a descricao quando informado.
+- `partial.descOwnerPn`: `string`, opcional, não aceita `null`. Phone number de quem definiu a descricao quando informado.
+- `partial.descOwnerUsername`: `string`, opcional, não aceita `null`. Username de quem definiu a descricao quando informado.
 - `partial.descId`: `string`, opcional, não aceita `null`. ID da descricao quando informado.
 - `partial.descTime`: `number`, opcional, não aceita `null`. Timestamp Unix da descricao quando informado.
 - `partial.linkedParent`: `string`, opcional, não aceita `null`. Grupo/comunidade pai quando informado.
@@ -790,8 +790,8 @@ x-webhook-event: groups.update
 - `partial.ephemeralDuration`: `number`, opcional, não aceita `null`. Duracao de mensagens temporarias em segundos quando informada.
 - `partial.inviteCode`: `string`, opcional, não aceita `null`. Codigo de convite quando informado.
 - `partial.author`: `string`, opcional, não aceita `null`. Autor da alteracao quando informado.
-- `partial.authorPn`: `string`, opcional, não aceita `null`. Número de telefone do autor quando informado.
-- `partial.authorUsername`: `string`, opcional, não aceita `null`. Nome de usuário do autor quando informado.
+- `partial.authorPn`: `string`, opcional, não aceita `null`. Phone number do autor quando informado.
+- `partial.authorUsername`: `string`, opcional, não aceita `null`. Username do autor quando informado.
 
 #### Observações
 
@@ -823,7 +823,7 @@ Content-Type: application/json
 x-webhook-event: groups.upsert
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -866,18 +866,18 @@ x-webhook-event: groups.upsert
 - `notify`: `string`, opcional, não aceita `null`. Nome de notificacao do grupo quando informado.
 - `addressingMode`: `string`, opcional, não aceita `null`. Modo de enderecamento do grupo quando informado.
 - `owner`: `string`, opcional, não aceita `null`. JID do owner quando informado.
-- `ownerPn`: `string`, opcional, não aceita `null`. Número de telefone do proprietário quando informado.
-- `ownerUsername`: `string`, opcional, não aceita `null`. Nome de usuário do proprietário quando informado.
+- `ownerPn`: `string`, opcional, não aceita `null`. Phone number do owner quando informado.
+- `ownerUsername`: `string`, opcional, não aceita `null`. Username do owner quando informado.
 - `ownerCountryCode`: `string`, opcional, não aceita `null`. Codigo de pais do owner quando informado.
 - `subjectOwner`: `string`, opcional, não aceita `null`. JID de quem definiu o subject quando informado.
-- `subjectOwnerPn`: `string`, opcional, não aceita `null`. Número de telefone de quem definiu o subject quando informado.
-- `subjectOwnerUsername`: `string`, opcional, não aceita `null`. Nome de usuário de quem definiu o subject quando informado.
+- `subjectOwnerPn`: `string`, opcional, não aceita `null`. Phone number de quem definiu o subject quando informado.
+- `subjectOwnerUsername`: `string`, opcional, não aceita `null`. Username de quem definiu o subject quando informado.
 - `subjectTime`: `number`, opcional, não aceita `null`. Timestamp Unix do subject quando informado.
 - `creation`: `number`, opcional, não aceita `null`. Timestamp Unix de criacao quando informado.
 - `desc`: `string`, opcional, não aceita `null`. Descricao do grupo quando informada.
 - `descOwner`: `string`, opcional, não aceita `null`. JID de quem definiu a descricao quando informado.
-- `descOwnerPn`: `string`, opcional, não aceita `null`. Número de telefone de quem definiu a descricao quando informado.
-- `descOwnerUsername`: `string`, opcional, não aceita `null`. Nome de usuário de quem definiu a descricao quando informado.
+- `descOwnerPn`: `string`, opcional, não aceita `null`. Phone number de quem definiu a descricao quando informado.
+- `descOwnerUsername`: `string`, opcional, não aceita `null`. Username de quem definiu a descricao quando informado.
 - `descId`: `string`, opcional, não aceita `null`. ID da descricao quando informado.
 - `descTime`: `number`, opcional, não aceita `null`. Timestamp Unix da descricao quando informado.
 - `linkedParent`: `string`, opcional, não aceita `null`. Grupo/comunidade pai quando informado.
@@ -891,8 +891,8 @@ x-webhook-event: groups.upsert
 - `ephemeralDuration`: `number`, opcional, não aceita `null`. Duracao de mensagens temporarias em segundos quando informada.
 - `inviteCode`: `string`, opcional, não aceita `null`. Codigo de convite quando informado.
 - `author`: `string`, opcional, não aceita `null`. Autor da alteracao quando informado.
-- `authorPn`: `string`, opcional, não aceita `null`. Número de telefone do autor quando informado.
-- `authorUsername`: `string`, opcional, não aceita `null`. Nome de usuário do autor quando informado.
+- `authorPn`: `string`, opcional, não aceita `null`. Phone number do autor quando informado.
+- `authorUsername`: `string`, opcional, não aceita `null`. Username do autor quando informado.
 
 #### Observações
 
@@ -924,7 +924,7 @@ Content-Type: application/json
 x-webhook-event: history.sync
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -987,7 +987,7 @@ Content-Type: application/json
 x-webhook-event: identity.update
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1044,7 +1044,7 @@ Content-Type: application/json
 x-webhook-event: labels.association
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1112,7 +1112,7 @@ Content-Type: application/json
 x-webhook-event: labels.edit
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1172,7 +1172,7 @@ Content-Type: application/json
 x-webhook-event: media.retry
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1237,7 +1237,7 @@ Content-Type: application/json
 x-webhook-event: messages.delete
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1304,7 +1304,7 @@ Content-Type: application/json
 x-webhook-event: messages.star
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1369,7 +1369,7 @@ Content-Type: application/json
 x-webhook-event: messages.undecryptable
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1443,7 +1443,7 @@ Content-Type: application/json
 x-webhook-event: messages.update
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1506,7 +1506,7 @@ Content-Type: application/json
 x-webhook-event: messages.upsert
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1585,7 +1585,7 @@ Content-Type: application/json
 x-webhook-event: news.letter
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1648,7 +1648,7 @@ Content-Type: application/json
 x-webhook-event: presence.updated
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1717,7 +1717,7 @@ Content-Type: application/json
 x-webhook-event: profile.picture.update
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1780,7 +1780,7 @@ Content-Type: application/json
 x-webhook-event: qrcode.updated
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1841,7 +1841,7 @@ Content-Type: application/json
 x-webhook-event: send.message
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1921,7 +1921,7 @@ Content-Type: application/json
 x-webhook-event: settings.update
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -1986,7 +1986,7 @@ Content-Type: application/json
 x-webhook-event: status.instance
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {
@@ -2050,7 +2050,7 @@ Content-Type: application/json
 x-webhook-event: user.about.update
 ```
 
-#### Corpo
+#### Body
 
 ```json
 {

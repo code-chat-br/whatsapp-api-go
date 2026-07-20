@@ -36,6 +36,7 @@ type ConnectedClientResolver interface {
 
 type Service interface {
 	CheckWhatsAppNumbers(ctx context.Context, instanceName string, bearerToken string, input WhatsAppNumbersRequest) ([]WhatsAppNumberResponse, error)
+	FindMessages(ctx context.Context, instanceName string, bearerToken string, input FindMessagesRequest) (dbtypes.MessageListResult, error)
 	ReadMessages(ctx context.Context, instanceName string, bearerToken string, input ReadMessagesRequest) error
 	ArchiveChat(ctx context.Context, instanceName string, bearerToken string, input ArchiveChatRequest) error
 	DeleteMessageForEveryone(ctx context.Context, instanceName string, bearerToken string, messageID int64) error
@@ -46,13 +47,13 @@ type Service interface {
 }
 
 type ChatService struct {
-	instances    repository.InstanceRepository
-	messages     repository.MessageRepository
-	clients      ConnectedClientResolver
-	resolver     address.Resolver
-	numbersLimit int
+	instances     repository.InstanceRepository
+	messages      repository.MessageRepository
+	clients       ConnectedClientResolver
+	resolver      address.Resolver
+	numbersLimit  int
 	maxMediaBytes int64
-	logger       zerolog.Logger
+	logger        zerolog.Logger
 }
 
 func NewService(
@@ -63,13 +64,13 @@ func NewService(
 	logger zerolog.Logger,
 ) *ChatService {
 	return &ChatService{
-		instances:    instances,
-		messages:     messages,
-		clients:      clients,
-		resolver:     resolver,
-		numbersLimit: DefaultWhatsAppNumbersLimit,
+		instances:     instances,
+		messages:      messages,
+		clients:       clients,
+		resolver:      resolver,
+		numbersLimit:  DefaultWhatsAppNumbersLimit,
 		maxMediaBytes: DefaultMaxMediaBytes,
-		logger:       logger.With().Str("component", "chat_service").Logger(),
+		logger:        logger.With().Str("component", "chat_service").Logger(),
 	}
 }
 
@@ -129,6 +130,32 @@ func (s *ChatService) CheckWhatsAppNumbers(ctx context.Context, instanceName str
 	return result, nil
 }
 
+func (s *ChatService) FindMessages(ctx context.Context, instanceName string, bearerToken string, input FindMessagesRequest) (dbtypes.MessageListResult, error) {
+	if err := validateFindMessages(&input); err != nil {
+		return dbtypes.MessageListResult{}, err
+	}
+	instance, err := s.authenticateInstance(ctx, instanceName, bearerToken)
+	if err != nil {
+		return dbtypes.MessageListResult{}, err
+	}
+	result, err := s.messages.ListPage(ctx, instance.ID, dbtypes.ListMessagesPageInput{
+		Limit:   input.Offset,
+		Page:    input.Page,
+		Filters: findMessagesFilters(input.Where),
+	})
+	if err != nil {
+		return dbtypes.MessageListResult{}, err
+	}
+	s.logger.Info().
+		Int32("instanceId", instance.ID).
+		Str("instanceName", instance.Name).
+		Str("operation", "find-messages").
+		Int32("limit", input.Offset).
+		Int32("page", input.Page).
+		Msg("messages listed")
+	return result, nil
+}
+
 func (s *ChatService) ReadMessages(ctx context.Context, instanceName string, bearerToken string, input ReadMessagesRequest) error {
 	if err := validateReadMessages(input); err != nil {
 		return err
@@ -163,6 +190,56 @@ func (s *ChatService) ReadMessages(ctx context.Context, instanceName string, bea
 		Int("readMessagesCount", len(ids)).
 		Msg("messages marked read")
 	return nil
+}
+
+func findMessagesFilters(where FindMessagesWhere) dbtypes.MessageFilters {
+	keyID := trimmedString(firstString(where.KeyID, where.KeyIDCamel))
+	keyRemoteJid := trimmedString(where.KeyRemoteJid)
+	messageType := trimmedString(where.MessageType)
+	messageStatus := trimmedString(where.MessageStatus)
+
+	var keyFromMe *bool
+	if where.KeyFromMe != nil {
+		value := bool(*where.KeyFromMe)
+		keyFromMe = &value
+	}
+	var device *dbtypes.DeviceMessage
+	if value := trimmedString(where.Device); value != nil {
+		value := dbtypes.DeviceMessage(*value)
+		device = &value
+	}
+
+	return dbtypes.MessageFilters{
+		ID:                  where.ID,
+		KeyID:               keyID,
+		KeyRemoteJid:        keyRemoteJid,
+		KeyFromMe:           keyFromMe,
+		MessageType:         messageType,
+		Device:              device,
+		MessageStatus:       messageStatus,
+		MessageTimestampGTE: where.MessageTimestampGTE,
+		MessageTimestampLTE: where.MessageTimestampLTE,
+	}
+}
+
+func firstString(values ...*string) *string {
+	for _, value := range values {
+		if value != nil {
+			return value
+		}
+	}
+	return nil
+}
+
+func trimmedString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }
 
 func (s *ChatService) ArchiveChat(ctx context.Context, instanceName string, bearerToken string, input ArchiveChatRequest) error {
@@ -435,6 +512,14 @@ func (s *ChatService) authenticateInstance(ctx context.Context, instanceName str
 		return dbtypes.Instance{}, whatsapp.ErrInvalidInstanceToken
 	}
 	if instance.Instance.Status != dbtypes.InstanceStatusOnline {
+		if instance.Instance.ConnectionStatus == dbtypes.InstanceConnectionStatusLoggedOut {
+			active := dbtypes.InstanceStatusOnline
+			if err := s.instances.UpdateStatus(ctx, instance.Instance.ID, active); err != nil {
+				return dbtypes.Instance{}, err
+			}
+			instance.Instance.Status = active
+			return instance.Instance, nil
+		}
 		return dbtypes.Instance{}, whatsapp.ErrInstanceInactive
 	}
 	return instance.Instance, nil

@@ -58,6 +58,24 @@ func (h *ChatHandler) ReadMessages(c fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(chat.ReadMessagesResponse{Message: "Read messages", Read: "success"})
 }
 
+func (h *ChatHandler) FindMessages(c fiber.Ctx) error {
+	token, err := bearerToken(c)
+	if err != nil {
+		return err
+	}
+	var body chat.FindMessagesRequest
+	if len(bytes.TrimSpace(c.Body())) > 0 {
+		if err := c.Bind().Body(&body); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest)
+		}
+	}
+	result, err := h.service.FindMessages(c.Context(), c.Params("instanceName"), token, body)
+	if err != nil {
+		return err
+	}
+	return c.Status(fiber.StatusOK).JSON(result)
+}
+
 func (h *ChatHandler) ArchiveChat(c fiber.Ctx) error {
 	token, err := bearerToken(c)
 	if err != nil {

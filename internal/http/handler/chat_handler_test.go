@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog"
@@ -161,12 +162,89 @@ func TestChatHandlerMediaDataInvalidBinary(t *testing.T) {
 	}
 }
 
+func TestChatHandlerFindMessages(t *testing.T) {
+	remoteJID := "123@s.whatsapp.net"
+	service := &fakeChatService{
+		findResult: dbtypes.MessageListResult{
+			Messages: dbtypes.MessagePage{
+				Total:       1,
+				Pages:       1,
+				CurrentPage: 1,
+				Records: []dbtypes.MessageWithUpdates{
+					{
+						Message: dbtypes.Message{
+							ID:               2,
+							KeyID:            "key-1",
+							KeyRemoteJid:     &remoteJID,
+							KeyFromMe:        true,
+							MessageType:      "conversation",
+							Content:          json.RawMessage(`{"text":"hello"}`),
+							MessageTimestamp: 100,
+							Device:           dbtypes.DeviceMessageIOS,
+							InstanceID:       1,
+						},
+						MessageUpdate: []dbtypes.MessageUpdateSummary{
+							{Status: "DELIVERY_ACK", DateTime: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
+						},
+					},
+				},
+			},
+		},
+	}
+	app := fiber.New()
+	app.Post("/chat/findMessages/:instanceName", NewChatHandler(service, zerolog.Nop()).FindMessages)
+
+	req := httptest.NewRequest(http.MethodPost, "/chat/findMessages/test_001", strings.NewReader(`{"where":{"keyFromMe":"true"},"offset":20,"page":1}`))
+	req.Header.Set("Authorization", "Bearer token")
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if service.findInstanceName != "test_001" || service.findToken != "token" {
+		t.Fatalf("service instance/token = %q/%q", service.findInstanceName, service.findToken)
+	}
+	if service.findInput.Offset != 20 || service.findInput.Page != 1 || service.findInput.Where.KeyFromMe == nil {
+		t.Fatalf("unexpected find input: %#v", service.findInput)
+	}
+}
+
+func TestChatHandlerFindMessagesAcceptsEmptyBody(t *testing.T) {
+	service := &fakeChatService{}
+	app := fiber.New()
+	app.Post("/chat/findMessages/:instanceName", NewChatHandler(service, zerolog.Nop()).FindMessages)
+
+	req := httptest.NewRequest(http.MethodPost, "/chat/findMessages/test_001", nil)
+	req.Header.Set("Authorization", "Bearer token")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test() error = %v", err)
+	}
+	if resp.StatusCode != fiber.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if service.findInstanceName != "test_001" || service.findToken != "token" {
+		t.Fatalf("service instance/token = %q/%q", service.findInstanceName, service.findToken)
+	}
+	if service.findInput.Offset != 0 || service.findInput.Page != 0 || service.findInput.Where.KeyFromMe != nil {
+		t.Fatalf("expected zero-value find input, got %#v", service.findInput)
+	}
+}
+
 type textHeader struct {
 	contentType string
 	fileName    string
 }
 
 type fakeChatService struct {
+	findResult        dbtypes.MessageListResult
+	findErr           error
+	findInstanceName  string
+	findToken         string
+	findInput         chat.FindMessagesRequest
 	mediaResult       chat.MediaDownloadResult
 	mediaErr          error
 	mediaInstanceName string
@@ -179,6 +257,13 @@ func (s *fakeChatService) CheckWhatsAppNumbers(context.Context, string, string, 
 
 func (s *fakeChatService) ReadMessages(context.Context, string, string, chat.ReadMessagesRequest) error {
 	return nil
+}
+
+func (s *fakeChatService) FindMessages(_ context.Context, instanceName string, token string, input chat.FindMessagesRequest) (dbtypes.MessageListResult, error) {
+	s.findInstanceName = instanceName
+	s.findToken = token
+	s.findInput = input
+	return s.findResult, s.findErr
 }
 
 func (s *fakeChatService) ArchiveChat(context.Context, string, string, chat.ArchiveChatRequest) error {

@@ -503,6 +503,14 @@ func (s *MessageService) authenticateInstance(ctx context.Context, instanceName 
 		return dbtypes.InstanceWithAuth{}, whatsapp.ErrInvalidInstanceToken
 	}
 	if instance.Instance.Status != dbtypes.InstanceStatusOnline {
+		if instance.Instance.ConnectionStatus == dbtypes.InstanceConnectionStatusLoggedOut {
+			active := dbtypes.InstanceStatusOnline
+			if err := s.instances.UpdateStatus(ctx, instance.Instance.ID, active); err != nil {
+				return dbtypes.InstanceWithAuth{}, err
+			}
+			instance.Instance.Status = active
+			return instance, nil
+		}
 		return dbtypes.InstanceWithAuth{}, whatsapp.ErrInstanceInactive
 	}
 	return instance, nil

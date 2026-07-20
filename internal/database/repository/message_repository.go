@@ -29,6 +29,7 @@ type MessageRepository interface {
 	UpdateContentForInstance(ctx context.Context, instanceID int32, id int32, content json.RawMessage) (types.Message, error)
 	Count(ctx context.Context, instanceID int32, filters types.MessageFilters) (int64, error)
 	List(ctx context.Context, instanceID int32, input types.ListMessagesInput) (types.MessageListResult, error)
+	ListPage(ctx context.Context, instanceID int32, input types.ListMessagesPageInput) (types.MessageListResult, error)
 }
 
 type messageRepository struct {
@@ -298,6 +299,43 @@ func (r *messageRepository) List(ctx context.Context, instanceID int32, input ty
 	}, nil
 }
 
+func (r *messageRepository) ListPage(ctx context.Context, instanceID int32, input types.ListMessagesPageInput) (types.MessageListResult, error) {
+	if input.Limit <= 0 {
+		return types.MessageListResult{}, fmt.Errorf("%w: limit must be positive", ErrInvalidInput)
+	}
+	if input.Page <= 0 {
+		return types.MessageListResult{}, fmt.Errorf("%w: page must be positive", ErrInvalidInput)
+	}
+	if input.Filters.ID != nil {
+		return r.listByID(ctx, instanceID, *input.Filters.ID)
+	}
+
+	total, err := r.Count(ctx, instanceID, input.Filters)
+	if err != nil {
+		return types.MessageListResult{}, err
+	}
+	offset := (input.Page - 1) * input.Limit
+	messages, err := r.q.ListMessagesPage(ctx, listMessagesPageParams(instanceID, offset, input))
+	if err != nil {
+		r.logger.Error().Err(err).Str("operation", "message.list_page").Int32("instanceId", instanceID).Msg("failed to list messages")
+		return types.MessageListResult{}, fmt.Errorf("list messages page: %w", err)
+	}
+	records, err := r.composeMessages(ctx, messages)
+	if err != nil {
+		return types.MessageListResult{}, err
+	}
+
+	pages := int64(math.Ceil(float64(total) / float64(input.Limit)))
+	return types.MessageListResult{
+		Messages: types.MessagePage{
+			Total:       total,
+			Pages:       pages,
+			CurrentPage: int64(input.Page),
+			Records:     records,
+		},
+	}, nil
+}
+
 func (r *messageRepository) listByID(ctx context.Context, instanceID int32, id int32) (types.MessageListResult, error) {
 	message, err := r.q.FindMessageByIDForInstance(ctx, db.FindMessageByIDForInstanceParams{Instanceid: instanceID, ID: id})
 	if err != nil {
@@ -341,9 +379,13 @@ func (r *messageRepository) composeMessages(ctx context.Context, messages []db.M
 	}
 	records := make([]types.MessageWithUpdates, 0, len(messages))
 	for _, message := range messages {
+		messageUpdates := updatesByMessage[message.ID]
+		if messageUpdates == nil {
+			messageUpdates = []types.MessageUpdateSummary{}
+		}
 		records = append(records, types.MessageWithUpdates{
 			Message:       mapMessage(message),
-			MessageUpdate: updatesByMessage[message.ID],
+			MessageUpdate: messageUpdates,
 		})
 	}
 	return records, nil
@@ -381,6 +423,16 @@ func listMessagesPreviousParams(instanceID int32, input types.ListMessagesInput)
 	return params
 }
 
+func listMessagesPageParams(instanceID int32, offset int32, input types.ListMessagesPageInput) db.ListMessagesPageParams {
+	params := db.ListMessagesPageParams{
+		Instanceid: instanceID,
+		Offsetrows: offset,
+		Limitcount: input.Limit,
+	}
+	applyMessageFilters(&params, input.Filters)
+	return params
+}
+
 func countMessagesBeforeIDParams(instanceID int32, id int32, filters types.MessageFilters) db.CountMessagesBeforeIDParams {
 	params := db.CountMessagesBeforeIDParams{Instanceid: instanceID, ID: id}
 	applyMessageFilters(&params, filters)
@@ -388,7 +440,7 @@ func countMessagesBeforeIDParams(instanceID int32, id int32, filters types.Messa
 }
 
 type messageFilterTarget interface {
-	db.CountMessagesParams | db.ListMessagesNextParams | db.ListMessagesPreviousParams | db.CountMessagesBeforeIDParams
+	db.CountMessagesParams | db.ListMessagesNextParams | db.ListMessagesPreviousParams | db.ListMessagesPageParams | db.CountMessagesBeforeIDParams
 }
 
 func applyMessageFilters[T messageFilterTarget](params *T, filters types.MessageFilters) {
@@ -399,12 +451,15 @@ func applyMessageFilters[T messageFilterTarget](params *T, filters types.Message
 		applyNextFilters(p, filters)
 	case *db.ListMessagesPreviousParams:
 		applyPreviousFilters(p, filters)
+	case *db.ListMessagesPageParams:
+		applyPageFilters(p, filters)
 	case *db.CountMessagesBeforeIDParams:
 		applyBeforeFilters(p, filters)
 	}
 }
 
 func applyCountFilters(p *db.CountMessagesParams, filters types.MessageFilters) {
+	p.Device = db.DeviceMessage(types.DeviceMessageUnknown)
 	if filters.KeyID != nil {
 		p.Filterkeyid, p.Keyid = true, *filters.KeyID
 	}
@@ -445,6 +500,19 @@ func applyNextFilters(p *db.ListMessagesNextParams, filters types.MessageFilters
 }
 
 func applyPreviousFilters(p *db.ListMessagesPreviousParams, filters types.MessageFilters) {
+	next := db.ListMessagesNextParams{}
+	applyNextFilters(&next, filters)
+	p.Filterkeyid, p.Keyid = next.Filterkeyid, next.Keyid
+	p.Filterkeyremotejid, p.Keyremotejid = next.Filterkeyremotejid, next.Keyremotejid
+	p.Filterkeyfromme, p.Keyfromme = next.Filterkeyfromme, next.Keyfromme
+	p.Filtermessagetype, p.Messagetype = next.Filtermessagetype, next.Messagetype
+	p.Filterdevice, p.Device = next.Filterdevice, next.Device
+	p.Filtermessagetimestampgte, p.Messagetimestampgte = next.Filtermessagetimestampgte, next.Messagetimestampgte
+	p.Filtermessagetimestamplte, p.Messagetimestamplte = next.Filtermessagetimestamplte, next.Messagetimestamplte
+	p.Filtermessagestatus, p.Messagestatus = next.Filtermessagestatus, next.Messagestatus
+}
+
+func applyPageFilters(p *db.ListMessagesPageParams, filters types.MessageFilters) {
 	next := db.ListMessagesNextParams{}
 	applyNextFilters(&next, filters)
 	p.Filterkeyid, p.Keyid = next.Filterkeyid, next.Keyid

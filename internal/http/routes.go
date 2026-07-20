@@ -86,6 +86,7 @@ func RegisterRoutes(
 	if chatHandler != nil {
 		chats := app.Group("/chat")
 		chats.Post("/whatsappNumbers/:instanceName", instanceAuthMiddleware, chatHandler.WhatsAppNumbers)
+		chats.Post("/findMessages/:instanceName", instanceAuthMiddleware, chatHandler.FindMessages)
 		chats.Patch("/readMessages/:instanceName", instanceAuthMiddleware, chatHandler.ReadMessages)
 		chats.Put("/archiveChat/:instanceName", instanceAuthMiddleware, chatHandler.ArchiveChat)
 		chats.Delete("/deleteMessage/:instanceName", instanceAuthMiddleware, chatHandler.DeleteMessage)

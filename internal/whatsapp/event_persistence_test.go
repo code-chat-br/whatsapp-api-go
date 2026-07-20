@@ -348,6 +348,10 @@ func (f *fakePersistenceMessages) List(context.Context, int32, dbtypes.ListMessa
 	return dbtypes.MessageListResult{}, nil
 }
 
+func (f *fakePersistenceMessages) ListPage(context.Context, int32, dbtypes.ListMessagesPageInput) (dbtypes.MessageListResult, error) {
+	return dbtypes.MessageListResult{}, nil
+}
+
 type fakePersistenceMessageUpdates struct {
 	createCalls int
 	input       dbtypes.CreateMessageUpdateInput

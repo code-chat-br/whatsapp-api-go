@@ -103,6 +103,12 @@ type ListMessagesInput struct {
 	Filters   MessageFilters
 }
 
+type ListMessagesPageInput struct {
+	Limit   int32
+	Page    int32
+	Filters MessageFilters
+}
+
 type MessageListResult struct {
 	Messages MessagePage `json:"messages"`
 }

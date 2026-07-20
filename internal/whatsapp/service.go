@@ -844,6 +844,14 @@ func (s *Service) authenticateInstance(ctx context.Context, instanceName string,
 		return types.InstanceWithAuth{}, ErrInvalidInstanceToken
 	}
 	if instance.Instance.Status != types.InstanceStatusOnline {
+		if instance.Instance.ConnectionStatus == types.InstanceConnectionStatusLoggedOut {
+			active := types.InstanceStatusOnline
+			if err := s.instances.UpdateStatus(ctx, instance.Instance.ID, active); err != nil {
+				return types.InstanceWithAuth{}, err
+			}
+			instance.Instance.Status = active
+			return instance, nil
+		}
 		return types.InstanceWithAuth{}, ErrInstanceInactive
 	}
 	return instance, nil
@@ -853,20 +861,27 @@ func (s *Service) logoutInstance(ctx context.Context, item types.Instance) error
 	if err := s.cleanupWhatsAppClient(ctx, item); err != nil {
 		return err
 	}
+	return s.markInstanceLoggedOut(ctx, item.ID, true)
+}
 
+func (s *Service) markInstanceLoggedOut(ctx context.Context, instanceID int32, resetAttempts bool) error {
+	active := types.InstanceStatusOnline
+	if err := s.instances.UpdateStatus(ctx, instanceID, active); err != nil {
+		return err
+	}
 	status := types.InstanceConnectionStatusLoggedOut
 	now := time.Now().UTC()
 	event := "logged_out"
 	if err := s.instances.UpdateConnectionState(ctx, types.UpdateConnectionStateInput{
-		InstanceID:          item.ID,
+		InstanceID:          instanceID,
 		ConnectionStatus:    &status,
 		LastDisconnectedAt:  &now,
 		LastConnectionEvent: types.OptionalField[string]{Set: true, Value: &event},
-		ResetAttempts:       true,
+		ResetAttempts:       resetAttempts,
 	}); err != nil {
 		return err
 	}
-	if err := s.instances.ClearWhatsAppDevice(ctx, item.ID); err != nil && !errors.Is(err, repository.ErrInstanceNotFound) {
+	if err := s.instances.ClearWhatsAppDevice(ctx, instanceID); err != nil && !errors.Is(err, repository.ErrInstanceNotFound) {
 		return err
 	}
 	return nil
@@ -1047,16 +1062,7 @@ func (s *Service) registerEventHandlers(managed *ManagedWhatsAppClient, pairingC
 			s.dispatchConnectionWebhook(eventCtx, managed, webhooksvc.ConnectionInternalDisconnected, 0, nil, "")
 		case *events.LoggedOut:
 			eventCtx := context.Background()
-			status := types.InstanceConnectionStatusLoggedOut
-			now := time.Now().UTC()
-			name := "logged_out"
-			_ = s.instances.UpdateConnectionState(eventCtx, types.UpdateConnectionStateInput{
-				InstanceID:          instanceID,
-				ConnectionStatus:    &status,
-				LastDisconnectedAt:  &now,
-				LastConnectionEvent: types.OptionalField[string]{Set: true, Value: &name},
-			})
-			_ = s.instances.ClearWhatsAppDevice(eventCtx, instanceID)
+			_ = s.markInstanceLoggedOut(eventCtx, instanceID, false)
 			s.dispatchConnectionWebhook(eventCtx, managed, webhooksvc.ConnectionInternalLoggedOut, int(event.Reason), nil, event.Reason.String())
 			managed.Cancel()
 			s.cancelContactSync(managed.InstanceID)

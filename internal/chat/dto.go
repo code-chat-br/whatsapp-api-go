@@ -12,6 +12,8 @@ import (
 
 const (
 	DefaultWhatsAppNumbersLimit = 100
+	DefaultFindMessagesLimit    = 20
+	MaxFindMessagesLimit        = 100
 	MaxEditTextLength           = 65536
 	MaxMediaKeyIDLength         = 256
 )
@@ -31,6 +33,56 @@ type ReadMessagesRequest struct {
 	Sender     *string  `json:"sender,omitempty"`
 	Chat       *string  `json:"chat,omitempty"`
 	MessageIDs []string `json:"messageIds,omitempty" validate:"omitempty,min=1,dive,message_id"`
+}
+
+type FindMessagesRequest struct {
+	Where  FindMessagesWhere `json:"where,omitempty"`
+	Offset int32             `json:"offset,omitempty"`
+	Page   int32             `json:"page,omitempty"`
+}
+
+type FindMessagesWhere struct {
+	ID                  *int32        `json:"id,omitempty"`
+	KeyID               *string       `json:"keyid,omitempty"`
+	KeyIDCamel          *string       `json:"keyId,omitempty"`
+	KeyRemoteJid        *string       `json:"keyRemoteJid,omitempty"`
+	KeyFromMe           *FlexibleBool `json:"keyFromMe,omitempty"`
+	MessageType         *string       `json:"messageType,omitempty"`
+	Device              *string       `json:"device,omitempty"`
+	MessageStatus       *string       `json:"messageStatus,omitempty"`
+	MessageTimestampGTE *int32        `json:"messageTimestampGte,omitempty"`
+	MessageTimestampLTE *int32        `json:"messageTimestampLte,omitempty"`
+}
+
+type FlexibleBool bool
+
+func (b *FlexibleBool) UnmarshalJSON(data []byte) error {
+	if b == nil {
+		return errors.New("bool target is nil")
+	}
+	data = bytes.TrimSpace(data)
+	if bytes.Equal(data, []byte("true")) {
+		*b = true
+		return nil
+	}
+	if bytes.Equal(data, []byte("false")) {
+		*b = false
+		return nil
+	}
+	var value string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return errors.New("keyFromMe must be a boolean")
+	}
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "true":
+		*b = true
+		return nil
+	case "false":
+		*b = false
+		return nil
+	default:
+		return errors.New("keyFromMe must be a boolean")
+	}
 }
 
 type ArchiveChatRequest struct {
