@@ -132,6 +132,7 @@ type QRCodeUpdatedWebhookData struct {
 
 type MessageUpsertWebhookData struct {
 	ID                int64          `json:"id"`
+	MessageID         string         `json:"messageId"`
 	KeyRemoteJID      *string        `json:"keyRemoteJid"`
 	KeyLID            *string        `json:"keyLid"`
 	KeyFromMe         bool           `json:"keyFromMe"`
@@ -153,6 +154,7 @@ type MessageUpdateWebhookData struct {
 }
 
 type MessageDeletedWebhookData struct {
+	ID           *int64     `json:"id,omitempty"`
 	ChatJID      string     `json:"chatJid"`
 	SenderJID    *string    `json:"senderJid,omitempty"`
 	KeyFromMe    bool       `json:"keyFromMe"`
@@ -391,6 +393,7 @@ func NewMessageUpsertWebhookData(message types.Message) MessageUpsertWebhookData
 	}
 	return MessageUpsertWebhookData{
 		ID:                int64(message.ID),
+		MessageID:         message.KeyID,
 		KeyRemoteJID:      message.KeyRemoteJid,
 		KeyLID:            message.KeyLid,
 		KeyFromMe:         message.KeyFromMe,

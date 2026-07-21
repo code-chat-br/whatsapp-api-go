@@ -81,13 +81,14 @@ func TestMergeEventDataReservedFieldsPrevail(t *testing.T) {
 func TestMessageUpsertWebhookDataDefaultsJSONObjects(t *testing.T) {
 	message := types.Message{
 		ID:               10,
+		KeyID:            "msg-10",
 		MessageType:      "conversation",
 		Content:          nil,
 		MessageTimestamp: 1783170000,
 		Device:           types.DeviceMessageUnknown,
 	}
 	data := NewMessageUpsertWebhookData(message)
-	if data.ID != 10 || data.MessageTimestamp != 1783170000 {
+	if data.ID != 10 || data.MessageID != "msg-10" || data.MessageTimestamp != 1783170000 {
 		t.Fatalf("unexpected data: %#v", data)
 	}
 	if data.Content == nil || len(data.Content) != 0 {

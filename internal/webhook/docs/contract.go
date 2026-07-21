@@ -373,6 +373,7 @@ func messagesUpsertDoc() EventDoc {
 		Fields:                  messageFields(),
 		Example: envelope(dbtypes.WebhookEventMessagesUpsert, map[string]any{
 			"id":                1024,
+			"messageId":         "ABC123",
 			"keyRemoteJid":      "5511999999999@s.whatsapp.net",
 			"keyLid":            nil,
 			"keyFromMe":         false,
@@ -435,6 +436,7 @@ func messagesDeleteDoc() EventDoc {
 		DataType:       "object",
 		DataSchema:     "MessageDeletedWebhookData",
 		Fields: []Field{
+			field("id", "number", false, false, "ID interno da mensagem persistida quando encontrada pelo messageId."),
 			field("chatJid", "string", true, false, "JID da conversa."),
 			field("senderJid", "string", false, false, "JID do remetente quando disponivel; omitido quando ausente."),
 			field("keyFromMe", "boolean", true, false, "Indica se a mensagem era da propria instancia."),
@@ -445,6 +447,7 @@ func messagesDeleteDoc() EventDoc {
 			field("messageTime", "string", false, false, "Timestamp RFC3339 UTC original da mensagem quando informado; omitido quando ausente."),
 		},
 		Example: envelope(dbtypes.WebhookEventMessagesDeleted, map[string]any{
+			"id":           1024,
 			"chatJid":      "5511999999999@s.whatsapp.net",
 			"senderJid":    "5511988888888@s.whatsapp.net",
 			"keyFromMe":    false,
@@ -1196,6 +1199,7 @@ func settingsUpdateDoc() EventDoc {
 func messageFields() []Field {
 	return []Field{
 		field("id", "number", true, false, "ID interno da mensagem."),
+		field("messageId", "string", true, false, "ID externo/chave da mensagem no WhatsApp."),
 		field("keyRemoteJid", "string | null", true, true, "JID remoto da mensagem."),
 		field("keyLid", "string | null", true, true, "LID remoto da mensagem."),
 		field("keyFromMe", "boolean", true, false, "Indica se a mensagem foi enviada pela propria instancia."),

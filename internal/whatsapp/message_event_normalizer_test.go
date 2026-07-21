@@ -49,7 +49,7 @@ func TestNormalizeMessageConversation(t *testing.T) {
 	}
 }
 
-func TestNormalizeMessageSenderTimestampAndLID(t *testing.T) {
+func TestNormalizeMessageUsesInfoTimestampAndLID(t *testing.T) {
 	normalizer := NewMessageEventNormalizer()
 	traditional := watypes.NewJID("5511888888888", watypes.DefaultUserServer)
 	lid := watypes.NewJID("123456", watypes.HiddenUserServer)
@@ -76,14 +76,41 @@ func TestNormalizeMessageSenderTimestampAndLID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NormalizeMessage() error = %v", err)
 	}
-	if got.MessageTimestamp != 200 {
-		t.Fatalf("expected sender timestamp 200, got %d", got.MessageTimestamp)
+	if got.MessageTimestamp != 100 {
+		t.Fatalf("expected info timestamp 100, got %d", got.MessageTimestamp)
 	}
 	if got.KeyRemoteJid == nil || *got.KeyRemoteJid != "5511888888888@s.whatsapp.net" {
 		t.Fatalf("expected traditional remote jid, got %#v", got.KeyRemoteJid)
 	}
 	if got.KeyLid == nil || *got.KeyLid != "123456@lid" {
 		t.Fatalf("expected lid jid, got %#v", got.KeyLid)
+	}
+}
+
+func TestNormalizeMessageContentUnwrapsEditedProtocolMessage(t *testing.T) {
+	normalizer := NewMessageEventNormalizer()
+	outer := &wae2e.Message{
+		ProtocolMessage: &wae2e.ProtocolMessage{
+			Type: wae2e.ProtocolMessage_MESSAGE_EDIT.Enum(),
+			EditedMessage: &wae2e.Message{
+				ExtendedTextMessage: &wae2e.ExtendedTextMessage{Text: proto.String("edited")},
+			},
+		},
+	}
+
+	got, err := normalizer.NormalizeMessageContent(outer)
+	if err != nil {
+		t.Fatalf("NormalizeMessageContent() error = %v", err)
+	}
+	if got.MessageType != "extendedTextMessage" {
+		t.Fatalf("expected edited content type extendedTextMessage, got %s", got.MessageType)
+	}
+	var content map[string]any
+	if err := json.Unmarshal(got.Content, &content); err != nil {
+		t.Fatalf("unmarshal content: %v", err)
+	}
+	if content["text"] != "edited" {
+		t.Fatalf("unexpected edited content: %#v", content)
 	}
 }
 

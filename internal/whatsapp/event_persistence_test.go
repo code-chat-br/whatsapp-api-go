@@ -112,6 +112,9 @@ func TestHandleMessageDispatchesUpsertWithPersistedID(t *testing.T) {
 	if data.ID != 193 || data.MessageType != "extendedTextMessage" || data.MessageTimestamp != 10 {
 		t.Fatalf("unexpected webhook data: %#v", data)
 	}
+	if data.MessageID != "msg-1" {
+		t.Fatalf("expected webhook messageId msg-1, got %q", data.MessageID)
+	}
 	if data.Content == nil || data.Content["text"] != "hello" {
 		t.Fatalf("unexpected content: %#v", data.Content)
 	}
@@ -134,8 +137,52 @@ func TestHandleFBMessageDispatchesUpsertWithPersistedID(t *testing.T) {
 		t.Fatalf("expected messages.upsert dispatch, got calls=%d event=%s", webhooks.dispatchCalls, webhooks.event)
 	}
 	data := webhooks.data.(webhooksvc.MessageUpsertWebhookData)
-	if data.ID != 194 || data.MessageType != "fbMessage" {
+	if data.ID != 194 || data.MessageID != "fb-1" || data.MessageType != "fbMessage" {
 		t.Fatalf("unexpected webhook data: %#v", data)
+	}
+}
+
+func TestDispatchMessageDeletedWebhookAddsPersistedIDWhenKnown(t *testing.T) {
+	messages := &fakePersistenceMessages{
+		findResults: []findMessageResult{{message: dbtypes.Message{ID: 77, KeyID: "msg-1"}}},
+	}
+	webhooks := &fakePersistenceWebhooks{}
+	service := &Service{
+		instances: &fakeInstanceRepository{found: fakeInstanceFinder().instance},
+		events:    &EventPersistenceService{messages: messages},
+		webhooks:  webhooks,
+		logger:    zerolog.Nop(),
+	}
+
+	service.dispatchMessageDeletedWebhook(context.Background(), &ManagedWhatsAppClient{InstanceID: "42", InstanceName: "codechat"}, &events.DeleteForMe{MessageID: "msg-1"})
+
+	if messages.findCalls != 1 || messages.instanceID != 42 || messages.keyID != "msg-1" {
+		t.Fatalf("expected lookup by instance/key, got calls=%d instance=%d key=%s", messages.findCalls, messages.instanceID, messages.keyID)
+	}
+	if webhooks.dispatchCalls != 1 || webhooks.event != dbtypes.WebhookEventMessagesDeleted {
+		t.Fatalf("expected messages.delete dispatch, got calls=%d event=%s", webhooks.dispatchCalls, webhooks.event)
+	}
+	data := webhooks.data.(webhooksvc.MessageDeletedWebhookData)
+	if data.ID == nil || *data.ID != 77 || data.MessageID != "msg-1" {
+		t.Fatalf("unexpected delete webhook data: %#v", data)
+	}
+}
+
+func TestDispatchMessageDeletedWebhookOmitsPersistedIDWhenUnknown(t *testing.T) {
+	messages := &fakePersistenceMessages{alwaysErr: repository.ErrMessageNotFound}
+	webhooks := &fakePersistenceWebhooks{}
+	service := &Service{
+		instances: &fakeInstanceRepository{found: fakeInstanceFinder().instance},
+		events:    &EventPersistenceService{messages: messages},
+		webhooks:  webhooks,
+		logger:    zerolog.Nop(),
+	}
+
+	service.dispatchMessageDeletedWebhook(context.Background(), &ManagedWhatsAppClient{InstanceID: "42", InstanceName: "codechat"}, &events.DeleteForMe{MessageID: "msg-1"})
+
+	data := webhooks.data.(webhooksvc.MessageDeletedWebhookData)
+	if data.ID != nil {
+		t.Fatalf("expected omitted persisted id, got %#v", data.ID)
 	}
 }
 

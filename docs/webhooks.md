@@ -1246,6 +1246,7 @@ x-webhook-event: messages.delete
     "dateTime": "2026-07-04T18:00:00Z",
     "deleteMedia": true,
     "fromFullSync": false,
+    "id": 1024,
     "keyFromMe": false,
     "messageId": "ABC123",
     "messageTime": "2026-07-04T17:59:00Z",
@@ -1265,6 +1266,7 @@ x-webhook-event: messages.delete
 
 #### Campos de `data`
 
+- `id`: `number`, opcional, não aceita `null`. ID interno da mensagem persistida quando encontrada pelo messageId.
 - `chatJid`: `string`, obrigatório, não aceita `null`. JID da conversa.
 - `senderJid`: `string`, opcional, não aceita `null`. JID do remetente quando disponivel; omitido quando ausente.
 - `keyFromMe`: `boolean`, obrigatório, não aceita `null`. Indica se a mensagem era da propria instancia.
@@ -1522,6 +1524,7 @@ x-webhook-event: messages.upsert
     "keyParticipant": null,
     "keyParticipantLid": null,
     "keyRemoteJid": "5511999999999@s.whatsapp.net",
+    "messageId": "ABC123",
     "messageTimestamp": 1783188000,
     "messageType": "conversation",
     "metadata": null,
@@ -1542,6 +1545,7 @@ x-webhook-event: messages.upsert
 #### Campos de `data`
 
 - `id`: `number`, obrigatório, não aceita `null`. ID interno da mensagem.
+- `messageId`: `string`, obrigatório, não aceita `null`. ID externo/chave da mensagem no WhatsApp.
 - `keyRemoteJid`: `string | null`, obrigatório, aceita `null`. JID remoto da mensagem.
 - `keyLid`: `string | null`, obrigatório, aceita `null`. LID remoto da mensagem.
 - `keyFromMe`: `boolean`, obrigatório, não aceita `null`. Indica se a mensagem foi enviada pela propria instancia.
@@ -1877,6 +1881,7 @@ x-webhook-event: send.message
 #### Campos de `data`
 
 - `id`: `number`, obrigatório, não aceita `null`. ID interno da mensagem.
+- `messageId`: `string`, obrigatório, não aceita `null`. ID externo/chave da mensagem no WhatsApp.
 - `keyRemoteJid`: `string | null`, obrigatório, aceita `null`. JID remoto da mensagem.
 - `keyLid`: `string | null`, obrigatório, aceita `null`. LID remoto da mensagem.
 - `keyFromMe`: `boolean`, obrigatório, não aceita `null`. Indica se a mensagem foi enviada pela propria instancia.

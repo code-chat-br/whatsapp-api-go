@@ -56,6 +56,64 @@ func TestConsumeQRCodeChannelTimeoutAfterFirstQRDoesNotBlockFirstError(t *testin
 	}
 }
 
+func TestConsumeQRCodeChannelSuccessKeepsManagedContextAlive(t *testing.T) {
+	qr, err := NewQRGenerator("#ffffff", "#198754")
+	if err != nil {
+		t.Fatalf("NewQRGenerator: %v", err)
+	}
+	svc := &Service{
+		config: config.WhatsAppConfig{
+			QRCodeLimit:          5,
+			QRCodeExpirationTime: time.Second,
+			PairingTimeout:       time.Minute,
+		},
+		instances:     &fakeInstanceRepository{},
+		hub:           NewClientHub(),
+		lock:          &fakeConnectionLock{},
+		qr:            qr,
+		logger:        zerolog.Nop(),
+		passkeyClient: newWhatsmeowPasskeyClient,
+		pairings:      newPairingManager(),
+	}
+	pairingCtx, pairingCancel := context.WithCancel(context.Background())
+	instanceCtx, instanceCancel := context.WithCancel(context.Background())
+	t.Cleanup(instanceCancel)
+	session := &pairingSession{cancel: pairingCancel, ctx: pairingCtx, startedAt: time.Now()}
+	managed := &ManagedWhatsAppClient{
+		InstanceID:      "1",
+		InstanceName:    "codechat",
+		Context:         instanceCtx,
+		Cancel:          instanceCancel,
+		ConnectedSignal: make(chan struct{}),
+	}
+	if !svc.pairings.add(managed.InstanceID, session) {
+		t.Fatal("failed to add pairing session")
+	}
+	if err := svc.hub.Register(managed); err != nil {
+		t.Fatalf("register managed client: %v", err)
+	}
+	qrChannel := make(chan whatsmeow.QRChannelItem, 1)
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		svc.consumeQRCodeChannel(pairingCtx, pairingCancel, session, managed, qrChannel, nil, nil)
+	}()
+
+	qrChannel <- whatsmeow.QRChannelSuccess
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for QR consumer")
+	}
+	select {
+	case <-instanceCtx.Done():
+		t.Fatal("managed session context must stay alive after successful QR pairing")
+	default:
+	}
+}
+
 func TestConsumeQRCodeChannelErrorBeforeFirstQRReturnsRealError(t *testing.T) {
 	svc, _, managed, qrChannel, _, firstErr := newQRConsumerTest(t, 5)
 

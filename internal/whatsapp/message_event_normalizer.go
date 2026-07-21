@@ -43,7 +43,6 @@ func (n MessageEventNormalizer) NormalizeMessage(instanceID int32, event *waeven
 		return dbtypes.CreateMessageInput{}, err
 	}
 	message := n.normalizeFromInfo(instanceID, event.Info, content, n.messageMetadata(event))
-	message.MessageTimestamp = messageTimestampFromMessage(event.Info, event.Message)
 	return message, nil
 }
 
@@ -82,6 +81,7 @@ func (n MessageEventNormalizer) NormalizeMessageContent(message *wae2e.Message) 
 	if message == nil {
 		return normalizedContent{}, fmt.Errorf("%w: nil protobuf message", ErrUnsupportedMessageContent)
 	}
+	message = unwrapEditedMessage(message)
 	if text := strings.TrimSpace(message.GetConversation()); text != "" {
 		content, err := json.Marshal(map[string]string{"text": message.GetConversation()})
 		return normalizedContent{MessageType: "extendedTextMessage", Content: content}, err
@@ -238,13 +238,6 @@ func (n MessageEventNormalizer) fbMessageMetadata(event *waevents.FBMessage) jso
 	return raw
 }
 
-func messageTimestampFromMessage(info watypes.MessageInfo, message *wae2e.Message) int32 {
-	if ts := senderTimestampFromMessage(message); ts > 0 {
-		return safeUnix(ts)
-	}
-	return messageTimestampFromInfo(info)
-}
-
 func messageTimestampFromInfo(info watypes.MessageInfo) int32 {
 	if !info.Timestamp.IsZero() {
 		return safeUnix(info.Timestamp.Unix())
@@ -252,15 +245,22 @@ func messageTimestampFromInfo(info watypes.MessageInfo) int32 {
 	return safeUnix(time.Now().UTC().Unix())
 }
 
-func senderTimestampFromMessage(message *wae2e.Message) int64 {
-	if message == nil {
-		return 0
+func unwrapEditedMessage(message *wae2e.Message) *wae2e.Message {
+	for range 4 {
+		if message == nil {
+			return nil
+		}
+		if inner := message.GetEditedMessage().GetMessage(); inner != nil {
+			message = inner
+			continue
+		}
+		if protocol := message.GetProtocolMessage(); protocol != nil && protocol.GetType() == wae2e.ProtocolMessage_MESSAGE_EDIT && protocol.GetEditedMessage() != nil {
+			message = protocol.GetEditedMessage()
+			continue
+		}
+		return message
 	}
-	metadata := message.GetMessageContextInfo().GetDeviceListMetadata()
-	if metadata == nil || metadata.GetSenderTimestamp() == 0 {
-		return 0
-	}
-	return int64(metadata.GetSenderTimestamp())
+	return message
 }
 
 func safeUnix(value int64) int32 {

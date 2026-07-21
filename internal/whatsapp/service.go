@@ -214,7 +214,12 @@ func (s *Service) ConnectQRCode(ctx context.Context, instanceName string, bearer
 		}
 	}
 
-	pairingCtx, pairingCancel := context.WithTimeout(s.appCtx, s.config.MaximumPairingTime())
+	instanceParentCtx := s.appCtx
+	if instanceParentCtx == nil {
+		instanceParentCtx = context.Background()
+	}
+	instanceCtx, instanceCancel := context.WithCancel(instanceParentCtx)
+	pairingCtx, pairingCancel := context.WithTimeout(instanceCtx, s.config.MaximumPairingTime())
 	session := &pairingSession{
 		cancel:    pairingCancel,
 		ctx:       pairingCtx,
@@ -222,6 +227,7 @@ func (s *Service) ConnectQRCode(ctx context.Context, instanceName string, bearer
 	}
 	if !s.pairings.add(instanceID, session) {
 		pairingCancel()
+		instanceCancel()
 		return QRCodeConnectionResult{}, ErrConnectionInProgress
 	}
 	sessionRegistered := true
@@ -231,12 +237,13 @@ func (s *Service) ConnectQRCode(ctx context.Context, instanceName string, bearer
 		}
 	}()
 
-	managed := s.newManagedClient(instance.Instance, client, pairingCtx, pairingCancel)
+	managed := s.newManagedClient(instance.Instance, client, instanceCtx, instanceCancel)
 	s.registerEventHandlers(managed, pairingCancel)
 
 	qrChannel, err := client.GetQRChannel(pairingCtx)
 	if err != nil {
 		pairingCancel()
+		instanceCancel()
 		s.markConnectionError(ctx, instance.Instance.ID, types.InstanceConnectionStatusConnectionError, "qr_channel_error")
 		if errors.Is(err, whatsmeow.ErrQRStoreContainsID) || errors.Is(err, whatsmeow.ErrQRAlreadyConnected) {
 			return QRCodeConnectionResult{}, fmt.Errorf("%w: %w", ErrInstanceConnected, err)
@@ -245,6 +252,7 @@ func (s *Service) ConnectQRCode(ctx context.Context, instanceName string, bearer
 	}
 	if err := s.hub.Register(managed); err != nil {
 		pairingCancel()
+		instanceCancel()
 		return QRCodeConnectionResult{}, err
 	}
 	reserved = false
@@ -1815,6 +1823,21 @@ func (s *Service) dispatchMediaRetryWebhook(ctx context.Context, managed *Manage
 
 func (s *Service) dispatchMessageDeletedWebhook(ctx context.Context, managed *ManagedWhatsAppClient, event *events.DeleteForMe) {
 	data := messageDeletedWebhookData(event, time.Now().UTC())
+	if s.events != nil && s.events.messages != nil && strings.TrimSpace(event.MessageID) != "" {
+		message, err := s.events.messages.FindByKeyIDForInstance(ctx, mustAtoi32(managed.InstanceID), event.MessageID)
+		if err == nil {
+			id := int64(message.ID)
+			data.ID = &id
+		} else if !errors.Is(err, repository.ErrMessageNotFound) {
+			s.logger.Warn().
+				Err(err).
+				Str("event", string(types.WebhookEventMessagesDeleted)).
+				Str("instanceId", managed.InstanceID).
+				Str("instanceName", managed.InstanceName).
+				Str("messageKeyId", event.MessageID).
+				Msg("message delete webhook source entity not loaded")
+		}
+	}
 	s.dispatchWebhook(ctx, managed, types.WebhookEventMessagesDeleted, data)
 }
 
