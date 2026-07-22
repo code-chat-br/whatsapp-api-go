@@ -148,7 +148,8 @@ type MessageUpsertWebhookData struct {
 }
 
 type MessageUpdateWebhookData struct {
-	MessageID int64     `json:"keyId"`
+	MessageID int64     `json:"id"`
+	KeyId     string    `json:"keyId"`
 	Status    string    `json:"status"`
 	DateTime  time.Time `json:"dateTime"`
 }
@@ -409,9 +410,10 @@ func NewMessageUpsertWebhookData(message types.Message) MessageUpsertWebhookData
 	}
 }
 
-func NewMessageUpdateWebhookData(messageID int32, status string, dateTime time.Time) MessageUpdateWebhookData {
+func NewMessageUpdateWebhookData(messageID int32, keyId, status string, dateTime time.Time) MessageUpdateWebhookData {
 	return MessageUpdateWebhookData{
 		MessageID: int64(messageID),
+		KeyId:     keyId,
 		Status:    status,
 		DateTime:  dateTime.UTC(),
 	}

@@ -158,46 +158,48 @@ func (s *EventPersistenceService) HandleReceipt(ctx context.Context, managed *Ma
 		if strings.TrimSpace(keyID) == "" {
 			continue
 		}
-		if !s.cfg.SaveMessageUpdate {
-			continue
-		}
-		message, err := s.findMessageWithRetry(ctx, instanceID, keyID)
-		if err != nil {
-			if errors.Is(err, repository.ErrMessageNotFound) {
-				s.logger.Warn().
+		var message dbtypes.Message
+		if s.cfg.SaveMessageUpdate {
+			m, err := s.findMessageWithRetry(ctx, instanceID, keyID)
+			message = m
+			if err != nil {
+				if errors.Is(err, repository.ErrMessageNotFound) {
+					s.logger.Warn().
+						Str("event", "receipt").
+						Int32("instanceId", instanceID).
+						Str("instanceName", managed.InstanceName).
+						Str("messageKeyId", keyID).
+						Str("receiptType", string(event.Type)).
+						Time("timestamp", dateTime).
+						Msg("message not found for receipt")
+					s.logger.Warn().
+						Str("event", string(dbtypes.WebhookEventMessagesUpdated)).
+						Int32("instanceId", instanceID).
+						Str("instanceName", managed.InstanceName).
+						Str("messageKey", keyID).
+						Msg("webhook source entity not found")
+					continue
+				}
+				s.logger.Error().Err(err).Str("event", "receipt").Int32("instanceId", instanceID).Str("instanceName", managed.InstanceName).Str("messageKeyId", keyID).Msg("failed to find message for receipt")
+				continue
+			}
+			if err := s.messageUpdates.CreateOrIgnore(ctx, dbtypes.CreateMessageUpdateInput{
+				DateTime:  dateTime,
+				Status:    status,
+				MessageID: message.ID,
+			}); err != nil {
+				s.logger.Error().Err(err).
 					Str("event", "receipt").
+					Str("operation", "message_update.create_or_ignore").
 					Int32("instanceId", instanceID).
 					Str("instanceName", managed.InstanceName).
 					Str("messageKeyId", keyID).
-					Str("receiptType", string(event.Type)).
-					Time("timestamp", dateTime).
-					Msg("message not found for receipt")
-				s.logger.Warn().
-					Str("event", string(dbtypes.WebhookEventMessagesUpdated)).
-					Int32("instanceId", instanceID).
-					Str("instanceName", managed.InstanceName).
-					Str("messageKey", keyID).
-					Msg("webhook source entity not found")
+					Msg("failed to persist receipt")
 				continue
 			}
-			s.logger.Error().Err(err).Str("event", "receipt").Int32("instanceId", instanceID).Str("instanceName", managed.InstanceName).Str("messageKeyId", keyID).Msg("failed to find message for receipt")
-			continue
 		}
-		if err := s.messageUpdates.CreateOrIgnore(ctx, dbtypes.CreateMessageUpdateInput{
-			DateTime:  dateTime,
-			Status:    status,
-			MessageID: message.ID,
-		}); err != nil {
-			s.logger.Error().Err(err).
-				Str("event", "receipt").
-				Str("operation", "message_update.create_or_ignore").
-				Int32("instanceId", instanceID).
-				Str("instanceName", managed.InstanceName).
-				Str("messageKeyId", keyID).
-				Msg("failed to persist receipt")
-			continue
-		}
-		s.dispatchWebhook(ctx, managed, dbtypes.WebhookEventMessagesUpdated, webhooksvc.NewMessageUpdateWebhookData(message.ID, status, dateTime))
+
+		s.dispatchWebhook(ctx, managed, dbtypes.WebhookEventMessagesUpdated, webhooksvc.NewMessageUpdateWebhookData(message.ID, keyID, status, dateTime))
 	}
 }
 

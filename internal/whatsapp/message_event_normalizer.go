@@ -42,6 +42,11 @@ func (n MessageEventNormalizer) NormalizeMessage(instanceID int32, event *waeven
 	if err != nil {
 		return dbtypes.CreateMessageInput{}, err
 	}
+
+	if event.IsEdit {
+		content.MessageType = "editedMessage"
+	}
+
 	message := n.normalizeFromInfo(instanceID, event.Info, content, n.messageMetadata(event))
 	return message, nil
 }
