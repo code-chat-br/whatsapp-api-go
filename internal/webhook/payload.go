@@ -132,7 +132,7 @@ type QRCodeUpdatedWebhookData struct {
 
 type MessageUpsertWebhookData struct {
 	ID                int64          `json:"id"`
-	MessageID         string         `json:"messageId"`
+	MessageID         string         `json:"keyId"`
 	KeyRemoteJID      *string        `json:"keyRemoteJid"`
 	KeyLID            *string        `json:"keyLid"`
 	KeyFromMe         bool           `json:"keyFromMe"`
@@ -148,7 +148,7 @@ type MessageUpsertWebhookData struct {
 }
 
 type MessageUpdateWebhookData struct {
-	MessageID int64     `json:"messageId"`
+	MessageID int64     `json:"keyId"`
 	Status    string    `json:"status"`
 	DateTime  time.Time `json:"dateTime"`
 }
@@ -158,7 +158,7 @@ type MessageDeletedWebhookData struct {
 	ChatJID      string     `json:"chatJid"`
 	SenderJID    *string    `json:"senderJid,omitempty"`
 	KeyFromMe    bool       `json:"keyFromMe"`
-	MessageID    string     `json:"messageId"`
+	MessageID    string     `json:"keyId"`
 	DeleteMedia  bool       `json:"deleteMedia"`
 	FromFullSync bool       `json:"fromFullSync"`
 	DateTime     time.Time  `json:"dateTime"`
@@ -169,7 +169,7 @@ type MessageStarredWebhookData struct {
 	ChatJID      string    `json:"chatJid"`
 	SenderJID    *string   `json:"senderJid,omitempty"`
 	KeyFromMe    bool      `json:"keyFromMe"`
-	MessageID    string    `json:"messageId"`
+	MessageID    string    `json:"keyId"`
 	Starred      bool      `json:"starred"`
 	FromFullSync bool      `json:"fromFullSync"`
 	DateTime     time.Time `json:"dateTime"`
@@ -256,7 +256,7 @@ type IdentityUpdatedWebhookData struct {
 }
 
 type MediaRetryWebhookData struct {
-	MessageID     string    `json:"messageId"`
+	MessageID     string    `json:"keyId"`
 	ChatJID       string    `json:"chatJid"`
 	SenderJID     *string   `json:"senderJid,omitempty"`
 	KeyFromMe     bool      `json:"keyFromMe"`
