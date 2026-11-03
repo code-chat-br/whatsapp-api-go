@@ -2093,6 +2093,8 @@ x-webhook-event: user.about.update
 | `PairPasskeyConfirmation` | `intentionally_ignored` | Evento interativo de pareamento com codigo; nao e contrato de webhook. |
 | `PairPasskeyError` | `handled_without_webhook` | Tratado como estado/log de pareamento; nao ha payload publico estavel. |
 | `PairPasskeyRequest` | `intentionally_ignored` | Contem desafio/chave publica de pareamento e nao e serializado para webhook. |
+| `RotateADVSecret` | `intentionally_ignored` | Contem segredos ADV do pareamento e nunca e serializado para webhook. |
+| `NewsletterMilestone` | `intentionally_ignored` | Marco de canal (newsletter) ainda fora do contrato estavel de news.letter; cai em log fallback. |
 | `QRScannedWithoutMultidevice` | `handled_without_webhook` | O canal de QR converte o caso em falha de pareamento; emissoes diretas futuras caem em log fallback. |
 | `MediaRetryError` | `internal_only` | Struct auxiliar de erro usada dentro do payload de media.retry. |
 | `MexNotificationData` | `internal_only` | Struct auxiliar para notificacoes MEX sem evento publico dedicado. |

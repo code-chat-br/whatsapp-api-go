@@ -258,6 +258,8 @@ func Build() Document {
 			{Name: "PairPasskeyConfirmation", Status: "intentionally_ignored", Description: "Evento interativo de pareamento com codigo; nao e contrato de webhook."},
 			{Name: "PairPasskeyError", Status: "handled_without_webhook", Description: "Tratado como estado/log de pareamento; nao ha payload publico estavel."},
 			{Name: "PairPasskeyRequest", Status: "intentionally_ignored", Description: "Contem desafio/chave publica de pareamento e nao e serializado para webhook."},
+			{Name: "RotateADVSecret", Status: "intentionally_ignored", Description: "Contem segredos ADV do pareamento e nunca e serializado para webhook."},
+			{Name: "NewsletterMilestone", Status: "intentionally_ignored", Description: "Marco de canal (newsletter) ainda fora do contrato estavel de news.letter; cai em log fallback."},
 			{Name: "QRScannedWithoutMultidevice", Status: "handled_without_webhook", Description: "O canal de QR converte o caso em falha de pareamento; emissoes diretas futuras caem em log fallback."},
 			{Name: "MediaRetryError", Status: "internal_only", Description: "Struct auxiliar de erro usada dentro do payload de media.retry."},
 			{Name: "MexNotificationData", Status: "internal_only", Description: "Struct auxiliar para notificacoes MEX sem evento publico dedicado."},

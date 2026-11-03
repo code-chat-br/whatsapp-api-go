@@ -13,7 +13,7 @@ import (
 	dbtypes "whatsapp-go-api/internal/database/types"
 )
 
-const auditedWhatsmeowVersion = "v0.0.0-20260630180629-b572e5bcb92b"
+const auditedWhatsmeowVersion = "v0.0.0-20261102152715-54038813c47f"
 
 func TestWhatsmeowVersionForWebhookCoverage(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "go.mod"))
@@ -47,7 +47,7 @@ type eventCoverageEntry struct {
 
 func TestWebhookEventCoverage(t *testing.T) {
 	known := knownWhatsmeowEventTypes()
-	if len(known) != 74 {
+	if len(known) != 76 {
 		t.Fatalf("unexpected whatsmeow event type count: %d", len(known))
 	}
 	seen := map[string]struct{}{}
@@ -149,6 +149,7 @@ func knownWhatsmeowEventTypes() []string {
 		"NewsletterLeave",
 		"NewsletterLiveUpdate",
 		"NewsletterMessageMeta",
+		"NewsletterMilestone",
 		"NewsletterMuteChange",
 		"NotifyAccountReachoutTimelock",
 		"OfflineSyncCompleted",
@@ -167,6 +168,7 @@ func knownWhatsmeowEventTypes() []string {
 		"QR",
 		"QRScannedWithoutMultidevice",
 		"Receipt",
+		"RotateADVSecret",
 		"Star",
 		"StreamError",
 		"StreamReplaced",
@@ -228,6 +230,7 @@ func webhookCoverageMatrix() []eventCoverageEntry {
 		{"NewsletterLeave", "registerEventHandlers", dbtypes.WebhookEventNewsletter, coverageCovered, ""},
 		{"NewsletterLiveUpdate", "registerEventHandlers", dbtypes.WebhookEventNewsletter, coverageCovered, ""},
 		{"NewsletterMessageMeta", "Message.NewsletterMeta", "", coverageInternalOnly, "metadata struct attached to Message, not emitted independently"},
+		{"NewsletterMilestone", "fallback log", "", coverageIntentionallyIgnored, "newsletter milestone notification is not part of the stable newsletter webhook contract yet"},
 		{"NewsletterMuteChange", "registerEventHandlers", dbtypes.WebhookEventNewsletter, coverageCovered, ""},
 		{"NotifyAccountReachoutTimelock", "registerEventHandlers", dbtypes.WebhookEventStatusInstance, coverageCovered, ""},
 		{"OfflineSyncCompleted", "registerEventHandlers", dbtypes.WebhookEventStatusInstance, coverageCovered, ""},
@@ -246,6 +249,7 @@ func webhookCoverageMatrix() []eventCoverageEntry {
 		{"QR", "QR channel", dbtypes.WebhookEventQRCodeUpdated, coverageCovered, ""},
 		{"QRScannedWithoutMultidevice", "QR channel/fallback log", "", coverageHandledWithoutWebhook, "QR channel maps this to pairing failure state; AddEventHandler fallback logs future direct emissions safely"},
 		{"Receipt", "EventPersistenceService.HandleReceipt", dbtypes.WebhookEventMessagesUpdated, coverageCovered, ""},
+		{"RotateADVSecret", "fallback log", "", coverageIntentionallyIgnored, "contains companion ADV secrets from pairing and must never be serialized to webhook"},
 		{"Star", "registerEventHandlers", dbtypes.WebhookEventMessagesStarred, coverageCovered, ""},
 		{"StreamError", "registerEventHandlers", dbtypes.WebhookEventConnectionUpdated, coverageCovered, ""},
 		{"StreamReplaced", "registerEventHandlers", dbtypes.WebhookEventConnectionUpdated, coverageCovered, ""},
