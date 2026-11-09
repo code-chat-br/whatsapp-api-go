@@ -23,7 +23,7 @@ Este projeto não usa a API oficial do WhatsApp.
 - Conexão por código de pareamento com telefone.
 - Fluxo de pareamento por passkey.
 - Estado de conexão, logout e remoção de instância.
-- Envio de texto, link com preview, mídia por base64, mídia por upload, áudio no formato WhatsApp, contato, localização e reação.
+- Envio de texto, link com preview, mídia por URL ou upload, áudio no formato WhatsApp, contato, localização e reação.
 - Opções de mensagem para presença, delay, citação e menções.
 - Operações de chat para validação de números, leitura, arquivamento, exclusão, edição, foto de perfil, rejeição de chamada e download de mídia.
 - Operações de grupo para criação, foto, convite, revogação de convite, participantes e saída.
@@ -32,7 +32,7 @@ Este projeto não usa a API oficial do WhatsApp.
 - Persistência de sessões Whatsmeow em PostgreSQL ou SQLite.
 - Reconexão automática de sessões persistidas no startup.
 - Migrations SQL internas para o banco principal.
-- Especificação OpenAPI estática para endpoints de mensagem.
+- Especificação OpenAPI estática das rotas HTTP da API.
 
 ## Tecnologias utilizadas
 
@@ -470,7 +470,7 @@ A documentação técnica completa está disponível em [`/docs`](./docs/).
 - [Pareamento por Passkey](./docs/passkey-pairing.md#pareamento-por-passkey-no-whatsapp): detalha endpoints, headers, estados e limitações do fluxo de passkey.
 - [Envio de mensagens](./docs/send-messages.md#send-messages): documenta corpos, respostas, opções, fila, erros e limitações dos endpoints de mensagem.
 - [Webhooks](./docs/webhooks.md#webhooks): descreve configuração, envelope, headers, entrega e payloads dos eventos suportados.
-- [OpenAPI](./docs/openapi.yaml): especificação OpenAPI estática dos endpoints de envio de mensagem.
+- [OpenAPI](./docs/openapi.yaml) descreve as rotas HTTP, os esquemas de autenticação, os parâmetros e as respostas.
 
 ## Autenticação
 
@@ -574,9 +574,11 @@ curl -X PUT "http://localhost:8084/webhook/set/minha-instancia" \
   }'
 ```
 
-## OpenAPI
+## Swagger e OpenAPI
 
-O projeto possui especificação OpenAPI estática em [docs/openapi.yaml](./docs/openapi.yaml). O servidor HTTP atual não registra rota de Swagger, Scalar ou Redoc.
+Com a API rodando na porta padrão, abra [Swagger UI](http://localhost:8084/swagger/) para consultar as operações. O [OpenAPI em YAML](http://localhost:8084/swagger/openapi.yaml) é servido a partir de [docs/openapi.yaml](./docs/openapi.yaml), incorporado ao binário.
+
+A documentação é pública. Para executar operações protegidas pelo Swagger, use **Authorize** e informe a chave global ou o token Bearer da instância.
 
 ## Envio de mensagens
 

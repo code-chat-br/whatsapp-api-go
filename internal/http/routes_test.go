@@ -2,14 +2,17 @@ package http
 
 import (
 	"context"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/rs/zerolog"
 
+	"whatsapp-go-api/docs"
 	authjwt "whatsapp-go-api/internal/authentication/jwt"
 	"whatsapp-go-api/internal/chat"
 	"whatsapp-go-api/internal/config"
@@ -20,6 +23,40 @@ import (
 	webhooksvc "whatsapp-go-api/internal/webhook"
 	"whatsapp-go-api/internal/whatsapp"
 )
+
+func TestRegisterRoutesSwagger(t *testing.T) {
+	app := fiber.New()
+	RegisterRoutes(app, testConfig(), nil, nil, nil, nil, nil, nil, acceptingValidator{}, readyState{})
+
+	for _, tc := range []struct {
+		path        string
+		contentType string
+		body        string
+	}{
+		{"/swagger", "text/html", "/swagger/openapi.yaml"},
+		{"/swagger/", "text/html", `document.documentElement.classList.add("dark-mode")`},
+		{"/swagger/openapi.yaml", "application/yaml", docs.OpenAPI},
+		{"/swagger/swagger-ui-bundle.js", "javascript", "SwaggerUIBundle"},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			resp, err := app.Test(httptest.NewRequest(http.MethodGet, tc.path, nil))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK || !strings.Contains(resp.Header.Get("Content-Type"), tc.contentType) {
+				t.Fatalf("unexpected response: status %d, content type %q", resp.StatusCode, resp.Header.Get("Content-Type"))
+			}
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(body), tc.body) {
+				t.Fatalf("expected Swagger content at %s", tc.path)
+			}
+		})
+	}
+}
 
 func TestRegisterRoutesHealthAndReadiness(t *testing.T) {
 	app := fiber.New()

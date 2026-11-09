@@ -14,6 +14,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.53
 	github.com/rs/zerolog v1.35.1
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	github.com/swaggest/swgui v1.8.9
 	go.mau.fi/whatsmeow v0.0.0-20261107160454-79dc2a8c33df
 	golang.org/x/sync v0.25.0
 	google.golang.org/protobuf v1.36.12
@@ -42,6 +43,7 @@ require (
 	github.com/tinylib/msgp v1.6.5 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.78.0 // indirect
+	github.com/vearutop/statigz v1.4.0 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.64 // indirect
 	go.mau.fi/libsignal v0.2.3 // indirect
 	go.mau.fi/util v0.11.0 // indirect

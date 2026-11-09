@@ -29,6 +29,8 @@ func RegisterRoutes(
 	globalAuthMiddleware := middleware.GlobalAuth(config.Authentication.GlobalAuthToken)
 	instanceAuthMiddleware := middleware.InstanceAuth(tokenValidator)
 
+	registerSwaggerRoutes(app)
+
 	app.Get("/health", func(c fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "ok"})
 	})

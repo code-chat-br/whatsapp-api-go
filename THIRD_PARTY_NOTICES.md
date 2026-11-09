@@ -28,6 +28,14 @@ outputs, were not relicensed individually.
 - Official link: https://github.com/gofiber/fiber
 - Use: HTTP framework
 
+## Swagger UI
+
+- Project: swgui with embedded Swagger UI assets
+- Module: `github.com/swaggest/swgui`
+- License: Apache-2.0
+- Official links: https://github.com/swaggest/swgui and https://github.com/swagger-api/swagger-ui
+- Use: interactive OpenAPI documentation
+
 ## pgx
 
 - Project: pgx

@@ -2,12 +2,1374 @@ openapi: 3.0.3
 info:
   title: whatsapp-go-api
   version: 1.0.0
-  description: API contract for message sending endpoints.
+  description: |
+    HTTP API for managing WhatsApp instances, sending messages, working with chats and groups, and configuring webhooks.
+    The HTTP request body limit is 2 MiB, including multipart boundaries and fields.
+tags:
+  - name: documentation
+    description: Swagger UI and its OpenAPI specification.
+  - name: health
+    description: HTTP liveness and service readiness.
+  - name: instance
+    description: 'Instance management, authentication and WhatsApp pairing.'
+  - name: webhook
+    description: Instance webhook configuration.
+  - name: message
+    description: Outbound WhatsApp messages.
+  - name: chat
+    description: 'Number lookup, message history and chat operations.'
+  - name: group
+    description: WhatsApp group management.
 paths:
+  /swagger/:
+    get:
+      tags: [documentation]
+      operationId: getSwaggerUI
+      summary: Open the Swagger UI
+      security: []
+      responses:
+        '200':
+          description: Interactive Swagger documentation.
+          content:
+            text/html:
+              schema:
+                type: string
+  /swagger/openapi.yaml:
+    get:
+      tags: [documentation]
+      operationId: getOpenAPI
+      summary: Get the OpenAPI specification
+      security: []
+      responses:
+        '200':
+          description: The OpenAPI 3.0 specification in YAML.
+          content:
+            application/yaml:
+              schema:
+                type: string
+  /health:
+    get:
+      tags:
+        - health
+      operationId: getHealth
+      summary: Check HTTP liveness
+      security: []
+      responses:
+        '200':
+          description: HTTP server is running.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - ok
+  /ready:
+    get:
+      tags:
+        - health
+      operationId: getReadiness
+      summary: Check service readiness
+      security: []
+      responses:
+        '200':
+          description: Service is ready.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - ready
+        '503':
+          description: Service is not ready.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/ErrorResponse'
+  /instance/create:
+    post:
+      tags:
+        - instance
+      operationId: createInstance
+      summary: Create an instance and issue its token
+      security:
+        - globalApiKey: []
+        - globalApiKeyAlias: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              '$ref': '#/components/schemas/CreateInstanceRequest'
+      responses:
+        '201':
+          description: Instance and initial bearer token.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/InstanceCreated'
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '409':
+          '$ref': '#/components/responses/Conflict'
+        '422':
+          '$ref': '#/components/responses/UnprocessableEntity'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+    get:
+      tags:
+        - instance
+      operationId: listInstancesLegacy
+      summary: List instances using the legacy path
+      security:
+        - globalApiKey: []
+        - globalApiKeyAlias: []
+      parameters:
+        - name: instanceName
+          in: query
+          required: false
+          description: Filter by instance name.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Matching instances and their stored authentication records.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  '$ref': '#/components/schemas/InstanceListItem'
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '422':
+          '$ref': '#/components/responses/UnprocessableEntity'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+  /instance/fetchInstances:
+    get:
+      tags:
+        - instance
+      operationId: listInstances
+      summary: List instances
+      security:
+        - globalApiKey: []
+        - globalApiKeyAlias: []
+      parameters:
+        - name: instanceName
+          in: query
+          required: false
+          description: Filter by instance name.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Matching instances and their stored authentication records.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  '$ref': '#/components/schemas/InstanceListItem'
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '422':
+          '$ref': '#/components/responses/UnprocessableEntity'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+  /instance/fetchInstance/{instanceName}:
+    get:
+      tags:
+        - instance
+      operationId: getInstance
+      summary: Get an instance
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      responses:
+        '200':
+          description: Instance details and webhook configuration.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/InstanceDetails'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+  /instance/connect/{instanceName}:
+    get:
+      tags:
+        - instance
+      operationId: connectQrCodeLegacy
+      summary: Start or resume QR-code pairing
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      responses:
+        '200':
+          description: QR code or current connection state.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/QRCodeConnection'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '408':
+          '$ref': '#/components/responses/RequestTimeout'
+        '409':
+          '$ref': '#/components/responses/Conflict'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+    post:
+      tags:
+        - instance
+      operationId: connectQrCode
+      summary: Start or resume QR-code pairing
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      responses:
+        '200':
+          description: QR code or current connection state.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/QRCodeConnection'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '408':
+          '$ref': '#/components/responses/RequestTimeout'
+        '409':
+          '$ref': '#/components/responses/Conflict'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /instance/connect/{instanceName}/code/{phoneNumber}:
+    get:
+      tags:
+        - instance
+      operationId: connectPhone
+      summary: Request a phone pairing code
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+        - name: phoneNumber
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            example: '5511999999999'
+      responses:
+        '200':
+          description: Phone pairing code.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                properties:
+                  code:
+                    type: string
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '409':
+          '$ref': '#/components/responses/Conflict'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /instance/connect/{instanceName}/passkey/challenge:
+    post:
+      tags:
+        - instance
+      operationId: requestPasskeyChallenge
+      summary: Request a WebAuthn challenge
+      description: Returns the existing request ID and public key while the challenge is valid and unused.
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      responses:
+        '200':
+          description: Challenge for the active pairing session.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/PasskeyChallenge'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '409':
+          '$ref': '#/components/responses/Conflict'
+        '422':
+          '$ref': '#/components/responses/UnprocessableEntity'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /instance/connect/{instanceName}/passkey/assertion:
+    post:
+      tags:
+        - instance
+      operationId: submitPasskeyAssertion
+      summary: Submit a WebAuthn assertion
+      description: Submit the assertion for the active challenge. Passkey error identifiers are returned in the messages array.
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              '$ref': '#/components/schemas/PasskeyAssertionRequest'
+      responses:
+        '202':
+          description: Assertion sent to WhatsApp. Pairing can still require confirmation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - state
+                  - message
+                properties:
+                  state:
+                    type: string
+                    example: AWAITING_CONFIRMATION
+                  message:
+                    type: string
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '409':
+          '$ref': '#/components/responses/Conflict'
+        '410':
+          '$ref': '#/components/responses/Gone'
+        '422':
+          '$ref': '#/components/responses/UnprocessableEntity'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /instance/connectionState/{instanceName}:
+    get:
+      tags:
+        - instance
+      operationId: getConnectionState
+      summary: Get the WhatsApp connection state
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      responses:
+        '200':
+          description: Current connection state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - state
+                  - statusReason
+                  - instanceName
+                  - connectionStatus
+                  - connected
+                  - loggedIn
+                  - ownerJid
+                properties:
+                  state:
+                    type: string
+                  statusReason:
+                    type: integer
+                    format: int32
+                  instanceName:
+                    type: string
+                    minLength: 1
+                    example: codechat
+                  connectionStatus:
+                    '$ref': '#/components/schemas/ConnectionStatus'
+                  connected:
+                    type: boolean
+                  loggedIn:
+                    type: boolean
+                  ownerJid:
+                    type: string
+                    minLength: 1
+                    example: '5511999999999@s.whatsapp.net'
+                    nullable: true
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+  /instance/refreshToken/{instanceName}:
+    put:
+      tags:
+        - instance
+      operationId: refreshInstanceToken
+      summary: Rotate the instance bearer token
+      description: Send the current token as both the bearer credential and the oldToken field.
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - oldToken
+              properties:
+                oldToken:
+                  type: string
+                  minLength: 1
+      responses:
+        '200':
+          description: Replacement token.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/InstanceToken'
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+  /instance/logout/{instanceName}:
+    delete:
+      tags:
+        - instance
+      operationId: logoutInstance
+      summary: Log the instance out of WhatsApp
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      responses:
+        '200':
+          description: Logout result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - instanceName
+                  - state
+                  - connectionStatus
+                  - message
+                properties:
+                  instanceName:
+                    type: string
+                    minLength: 1
+                    example: codechat
+                  state:
+                    type: string
+                  connectionStatus:
+                    '$ref': '#/components/schemas/ConnectionStatus'
+                  message:
+                    type: string
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /instance/delete/{instanceName}:
+    delete:
+      tags:
+        - instance
+      operationId: deleteInstance
+      summary: Delete an instance
+      description: With force=true, related chats, messages, webhooks and contacts are deleted with the instance.
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+        - name: force
+          in: query
+          required: false
+          description: Allow deletion when related application data exists.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Deletion result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - instanceName
+                  - deleted
+                  - forced
+                  - message
+                properties:
+                  instanceName:
+                    type: string
+                    minLength: 1
+                    example: codechat
+                  deleted:
+                    type: boolean
+                  forced:
+                    type: boolean
+                  message:
+                    type: string
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          description: Deletion failed. If force is false and related data exists, messages identifies the relationships blocking deletion.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /webhook/set/{instanceName}:
+    put:
+      tags:
+        - webhook
+      operationId: setWebhook
+      summary: Create or update the instance webhook
+      description: Omit events to keep the existing event flags. A nonempty object merges the supplied flags. An empty object clears them. When enabled is omitted it defaults to true.
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  maxLength: 500
+                enabled:
+                  type: boolean
+                  default: true
+                events:
+                  '$ref': '#/components/schemas/WebhookEvents'
+              additionalProperties: false
+      responses:
+        '200':
+          description: Saved webhook configuration.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/Webhook'
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '409':
+          '$ref': '#/components/responses/Conflict'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+  /webhook/find/{instanceName}:
+    get:
+      tags:
+        - webhook
+      operationId: getWebhook
+      summary: Get the instance webhook
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      responses:
+        '200':
+          description: Saved webhook configuration.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/Webhook'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+  /chat/whatsappNumbers/{instanceName}:
+    post:
+      tags:
+        - chat
+      operationId: lookupWhatsAppNumbers
+      summary: Check whether numbers are registered on WhatsApp
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - numbers
+              properties:
+                numbers:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                    example: '5511999999999'
+                  minItems: 1
+                  maxItems: 100
+      responses:
+        '200':
+          description: Lookup result for each number.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - jid
+                    - lid
+                    - exists
+                  properties:
+                    jid:
+                      type: string
+                      minLength: 1
+                      example: '5511999999999@s.whatsapp.net'
+                    lid:
+                      type: string
+                      nullable: true
+                    exists:
+                      type: boolean
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /chat/findMessages/{instanceName}:
+    post:
+      tags:
+        - chat
+      operationId: findMessages
+      summary: List stored messages with pagination
+      description: The offset field is the page size. A lookup by where.id returns at most one record.
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              '$ref': '#/components/schemas/FindMessagesRequest'
+      responses:
+        '200':
+          description: Page of messages and their recorded status updates.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/MessageList'
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+  /chat/readMessages/{instanceName}:
+    patch:
+      tags:
+        - chat
+      operationId: readMessages
+      summary: Mark messages as read
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              '$ref': '#/components/schemas/ReadMessagesRequest'
+      responses:
+        '200':
+          description: Read receipt result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                  - read
+                properties:
+                  message:
+                    type: string
+                    example: Read messages
+                  read:
+                    type: string
+                    enum:
+                      - success
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '406':
+          '$ref': '#/components/responses/NotAcceptable'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /chat/archiveChat/{instanceName}:
+    put:
+      tags:
+        - chat
+      operationId: archiveChat
+      summary: Archive or unarchive a chat
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              '$ref': '#/components/schemas/ArchiveChatRequest'
+      responses:
+        '204':
+          description: Chat archive state updated.
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /chat/deleteMessage/{instanceName}:
+    delete:
+      tags:
+        - chat
+      operationId: deleteMessage
+      summary: Delete a sent message for everyone
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+        - name: id
+          in: query
+          required: true
+          description: Local database message ID.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+      responses:
+        '204':
+          description: Message deletion requested on WhatsApp.
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '406':
+          '$ref': '#/components/responses/NotAcceptable'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /chat/fetchProfilePictureUrl/{instanceName}:
+    post:
+      tags:
+        - chat
+      operationId: getProfilePictureUrl
+      summary: Get a profile picture URL
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              '$ref': '#/components/schemas/RecipientFields'
+      responses:
+        '200':
+          description: 'Profile picture URL, or null when no picture is available.'
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - profilePictureUrl
+                properties:
+                  profilePictureUrl:
+                    type: string
+                    format: uri
+                    nullable: true
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '409':
+          '$ref': '#/components/responses/Conflict'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /chat/rejectCall/{instanceName}:
+    post:
+      tags:
+        - chat
+      operationId: rejectCall
+      summary: Reject an incoming WhatsApp call
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - callId
+                - callFrom
+              properties:
+                callId:
+                  type: string
+                  minLength: 1
+                callFrom:
+                  type: string
+                  minLength: 1
+                  example: '5511999999999@s.whatsapp.net'
+      responses:
+        '204':
+          description: Call rejected.
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /chat/editMessage/{instanceName}:
+    post:
+      tags:
+        - chat
+      operationId: editMessage
+      summary: Edit an outgoing text message
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              '$ref': '#/components/schemas/EditMessageRequest'
+      responses:
+        '200':
+          description: Updated message.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/Message'
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '406':
+          '$ref': '#/components/responses/NotAcceptable'
+        '422':
+          '$ref': '#/components/responses/UnprocessableEntity'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /chat/mediaData/{instanceName}:
+    post:
+      tags:
+        - chat
+      operationId: downloadMedia
+      summary: Download message media
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+        - name: binary
+          in: query
+          required: false
+          description: Return raw file bytes rather than multipart metadata and file.
+          schema:
+            type: boolean
+            default: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              '$ref': '#/components/schemas/MediaDataRequest'
+            examples:
+              byDatabaseId:
+                value:
+                  id: 42
+              byWhatsAppKey:
+                value:
+                  keyId: 3EB0123456789ABCDEF0
+      responses:
+        '200':
+          description: 'Downloaded file and metadata, or raw bytes when binary=true.'
+          headers:
+            Content-Disposition:
+              description: 'Inline filename when binary=true.'
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+                example: 'private, no-store'
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+          content:
+            multipart/form-data:
+              schema:
+                type: object
+                required:
+                  - mediaType
+                  - fileName
+                  - size
+                  - mimetype
+                  - file
+                properties:
+                  mediaType:
+                    type: string
+                  fileName:
+                    type: string
+                  size:
+                    type: string
+                    description: JSON-encoded size metadata.
+                  mimetype:
+                    type: string
+                  file:
+                    type: string
+                    format: binary
+            '*/*':
+              schema:
+                type: string
+                format: binary
+                description: 'Raw file bytes with the detected Content-Type when binary=true.'
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '406':
+          '$ref': '#/components/responses/NotAcceptable'
+        '413':
+          '$ref': '#/components/responses/PayloadTooLarge'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /group/create/{instanceName}:
+    post:
+      tags:
+        - group
+      operationId: createGroup
+      summary: Create a WhatsApp group
+      description: 'If setting the optional description fails after creation, the group may already exist.'
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subject
+                - participants
+              properties:
+                subject:
+                  type: string
+                  minLength: 1
+                description:
+                  type: string
+                participants:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                    example: '5511999999999'
+                    description: Phone number or WhatsApp user JID.
+                  minItems: 1
+      responses:
+        '201':
+          description: Created group.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/GroupInfo'
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /group/updateGroupPicture/{instanceName}:
+    put:
+      tags:
+        - group
+      operationId: updateGroupPicture
+      summary: Update a group picture
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - image
+                - groupJid
+              properties:
+                image:
+                  type: string
+                  format: uri
+                  description: HTTP or HTTPS image URL. The download limit is 16 MiB.
+                groupJid:
+                  type: string
+                  minLength: 1
+                  example: '120363000000000000@g.us'
+      responses:
+        '200':
+          description: Updated group information.
+          content:
+            application/json:
+              schema:
+                '$ref': '#/components/schemas/GroupInfo'
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '413':
+          '$ref': '#/components/responses/PayloadTooLarge'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /group/inviteCode/{instanceName}:
+    get:
+      tags:
+        - group
+      operationId: getGroupInvite
+      summary: Get the group invitation link
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+        - name: groupJid
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            example: '120363000000000000@g.us'
+      responses:
+        '200':
+          description: Current invitation link.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - invitation
+                properties:
+                  invitation:
+                    type: string
+                    format: uri
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /group/revokeInviteCode/{instanceName}:
+    put:
+      tags:
+        - group
+      operationId: revokeGroupInvite
+      summary: Revoke the current group invitation link
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+        - name: groupJid
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            example: '120363000000000000@g.us'
+      responses:
+        '200':
+          description: Invitation revoked. The response body is empty.
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /group/updateParticipant/{instanceName}:
+    put:
+      tags:
+        - group
+      operationId: updateGroupParticipants
+      summary: Change group participants or their roles
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+        - name: groupJid
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            example: '120363000000000000@g.us'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - action
+                - participants
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - add
+                    - remove
+                    - promote
+                    - demote
+                participants:
+                  type: array
+                  items:
+                    type: string
+                    minLength: 1
+                    example: '5511999999999'
+                    description: Phone number or WhatsApp user JID.
+                  minItems: 1
+      responses:
+        '200':
+          description: Participant update submitted. The response body is empty.
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
+  /group/leaveGroup/{instanceName}:
+    delete:
+      tags:
+        - group
+      operationId: leaveGroup
+      summary: Leave a WhatsApp group
+      security:
+        - instanceBearer: []
+      parameters:
+        - '$ref': '#/components/parameters/InstanceName'
+        - name: groupJid
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            example: '120363000000000000@g.us'
+      responses:
+        '200':
+          description: Group left. The response body is empty.
+        '400':
+          '$ref': '#/components/responses/InvalidInput'
+        '401':
+          '$ref': '#/components/responses/Unauthorized'
+        '403':
+          '$ref': '#/components/responses/Forbidden'
+        '404':
+          '$ref': '#/components/responses/NotFound'
+        '500':
+          '$ref': '#/components/responses/InternalError'
+        '503':
+          '$ref': '#/components/responses/UpstreamUnavailable'
   /message/sendText/{instanceName}:
     post:
+      tags: [message]
+      operationId: sendText
       summary: Send a text message
-      description: Sends synchronously unless options.mentionAll is true.
+      description: Sends synchronously unless options.mentionAll is true. Track queued sends through the send.message webhook using processId.
       security:
         - instanceBearer: []
       parameters:
@@ -25,12 +1387,26 @@ paths:
           $ref: '#/components/responses/Accepted'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /message/sendLink/{instanceName}:
     post:
+      tags: [message]
+      operationId: sendLink
       summary: Send a link message
-      description: Supports options.mentionAll.
+      description: Supports options.mentionAll for groups.
       security:
         - instanceBearer: []
       parameters:
@@ -48,12 +1424,26 @@ paths:
           $ref: '#/components/responses/Accepted'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /message/sendMedia/{instanceName}:
     post:
+      tags: [message]
+      operationId: sendMedia
       summary: Send media from URL
-      description: Supports image, document, video, audio and ptv. Supports options.mentionAll.
+      description: Downloads an HTTP or HTTPS URL. Supports image, document, video, audio and ptv, and options.mentionAll for groups.
       security:
         - instanceBearer: []
       parameters:
@@ -71,12 +1461,26 @@ paths:
           $ref: '#/components/responses/Accepted'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /message/sendMediaFile/{instanceName}:
     post:
+      tags: [message]
+      operationId: sendMediaFile
       summary: Send media from multipart file upload
-      description: Uses multipart field attachment. Supports options.mentionAll through multipart form fields.
+      description: Uploads the multipart attachment. Use mediaType to specify image, document, video, audio or ptv. Supports mentionAll for groups.
       security:
         - instanceBearer: []
       parameters:
@@ -94,12 +1498,28 @@ paths:
           $ref: '#/components/responses/Accepted'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /message/sendWhatsAppAudio/{instanceName}:
     post:
+      tags: [message]
+      operationId: sendWhatsAppAudio
       summary: Send WhatsApp PTT audio from URL
-      description: Downloads and prepares audio as WhatsApp PTT. Supports options.mentionAll.
+      description: Downloads audio from an HTTP or HTTPS URL and prepares it as a WhatsApp voice note. Supports options.mentionAll for groups.
       security:
         - instanceBearer: []
       parameters:
@@ -117,12 +1537,30 @@ paths:
           $ref: '#/components/responses/Accepted'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /message/sendWhatsAppAudioFile/{instanceName}:
     post:
+      tags: [message]
+      operationId: sendWhatsAppAudioFile
       summary: Send WhatsApp PTT audio from multipart file upload
-      description: Uses multipart field attachment. Supports options.mentionAll through multipart form fields.
+      description: Uploads the multipart attachment and prepares it as a WhatsApp voice note. Supports options.mentionAll for groups.
       security:
         - instanceBearer: []
       parameters:
@@ -140,12 +1578,30 @@ paths:
           $ref: '#/components/responses/Accepted'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /message/sendContact/{instanceName}:
     post:
+      tags: [message]
+      operationId: sendContact
       summary: Send one or more contact cards
-      description: Supports quoted message, delay, presence, external attributes and options.mentionAll.
+      description: Accepts one or more contact cards and supports options.mentionAll for groups.
       security:
         - instanceBearer: []
       parameters:
@@ -163,12 +1619,26 @@ paths:
           $ref: '#/components/responses/Accepted'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /message/sendLocation/{instanceName}:
     post:
+      tags: [message]
+      operationId: sendLocation
       summary: Send a location
-      description: Supports quoted message, delay, presence, external attributes and options.mentionAll.
+      description: Supports options.mentionAll for groups.
       security:
         - instanceBearer: []
       parameters:
@@ -186,12 +1656,26 @@ paths:
           $ref: '#/components/responses/Accepted'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /message/sendReaction/{instanceName}:
     post:
+      tags: [message]
+      operationId: sendReaction
       summary: Send a reaction to an existing message
-      description: Does not support options.mentionAll because ReactionMessage has no ContextInfo.MentionedJID.
+      description: An empty reaction removes the reaction. options.mentionAll is rejected and only externalAttributes is used when supplied.
       security:
         - instanceBearer: []
       parameters:
@@ -207,13 +1691,34 @@ paths:
           $ref: '#/components/responses/MessageSent'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+          $ref: '#/components/responses/UpstreamUnavailable'
 components:
   securitySchemes:
+    globalApiKey:
+      type: apiKey
+      in: header
+      name: apikey
+      description: Global administration token. Header names are case-insensitive.
+    globalApiKeyAlias:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: 'Alternative header for the global administration token. If both headers are sent, their values must match.'
     instanceBearer:
       type: http
       scheme: bearer
+      bearerFormat: JWT
   parameters:
     InstanceName:
       name: instanceName
@@ -222,13 +1727,90 @@ components:
       schema:
         type: string
   responses:
+    InvalidInput:
+      description: 'Invalid request body, parameter or input.'
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid credentials.
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: The token does not authorize this operation on the requested instance.
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: The requested instance or related resource was not found.
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    NotAcceptable:
+      description: 'The operation could not retrieve or persist message data. For a send, the message may already have reached WhatsApp.'
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    RequestTimeout:
+      description: Timed out while waiting for pairing.
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: The request conflicts with the current resource or pairing state.
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    Gone:
+      description: The pairing challenge has expired.
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    PayloadTooLarge:
+      description: The request or file exceeds the permitted size.
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    UnsupportedMediaType:
+      description: The submitted media type is not supported.
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: The request cannot be processed in its current form or state.
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: The server could not complete the request.
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
+    UpstreamUnavailable:
+      description: WhatsApp or a required service is unavailable.
+      content:
+        application/json:
+          schema:
+            '$ref': '#/components/schemas/ErrorResponse'
     MessageSent:
       description: Message sent synchronously and persisted.
       content:
         application/json:
           schema:
-            type: object
-            additionalProperties: true
+            $ref: '#/components/schemas/Message'
     Accepted:
       description: Message accepted for asynchronous mentionAll processing.
       content:
@@ -284,8 +1866,877 @@ components:
                 messages:
                   - O servico de processamento de mensagens nao esta disponivel.
   schemas:
+    WebhookEvents:
+      type: object
+      properties:
+        qrcodeUpdated:
+          type: boolean
+        historySync:
+          type: boolean
+        messagesUpsert:
+          type: boolean
+        messagesUpdated:
+          type: boolean
+        messagesDeleted:
+          type: boolean
+        messagesStarred:
+          type: boolean
+        messagesUndecryptable:
+          type: boolean
+        sendMessage:
+          type: boolean
+        contactsUpsert:
+          type: boolean
+        contactsUpdated:
+          type: boolean
+        chatsUpdated:
+          type: boolean
+        chatsDeleted:
+          type: boolean
+        presenceUpdated:
+          type: boolean
+        groupsUpsert:
+          type: boolean
+        groupsUpdated:
+          type: boolean
+        groupsParticipantsUpdated:
+          type: boolean
+        connectionUpdated:
+          type: boolean
+        statusInstance:
+          type: boolean
+        newsLetter:
+          type: boolean
+        callUpsert:
+          type: boolean
+        labelsAssociation:
+          type: boolean
+        labelsEdit:
+          type: boolean
+        profilePictureUpdated:
+          type: boolean
+        userAboutUpdated:
+          type: boolean
+        identityUpdated:
+          type: boolean
+        mediaRetry:
+          type: boolean
+        settingsUpdated:
+          type: boolean
+      additionalProperties: false
+    Webhook:
+      type: object
+      required:
+        - id
+        - url
+        - enabled
+        - events
+        - createdAt
+        - updatedAt
+        - instanceId
+      properties:
+        id:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 42
+        url:
+          type: string
+          format: uri
+        enabled:
+          type: boolean
+        events:
+          '$ref': '#/components/schemas/WebhookEvents'
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        instanceId:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 42
+    ConnectionStatus:
+      type: string
+      enum:
+        - offline
+        - connecting
+        - qr_code
+        - pairing_code
+        - pairing
+        - online
+        - reconnecting
+        - disconnected
+        - connection_timeout
+        - logged_out
+        - session_missing
+        - stream_replaced
+        - keepalive_timeout
+        - client_outdated
+        - temporary_ban
+        - connection_error
+    InstanceDetails:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - createdAt
+        - updatedAt
+        - status
+        - connectionStatus
+        - ownerJid
+        - profilePicUrl
+        - Webhook
+      properties:
+        id:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 42
+        name:
+          type: string
+          minLength: 1
+          example: codechat
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum:
+            - ONLINE
+            - OFFLINE
+        connectionStatus:
+          '$ref': '#/components/schemas/ConnectionStatus'
+        ownerJid:
+          type: string
+          minLength: 1
+          example: '5511999999999@s.whatsapp.net'
+          nullable: true
+        profilePicUrl:
+          type: string
+          format: uri
+          nullable: true
+        Webhook:
+          type: object
+          required:
+            - id
+            - url
+            - enabled
+            - events
+            - createdAt
+            - updatedAt
+            - instanceId
+          properties:
+            id:
+              type: integer
+              format: int32
+              minimum: 1
+              example: 42
+            url:
+              type: string
+              format: uri
+            enabled:
+              type: boolean
+            events:
+              '$ref': '#/components/schemas/WebhookEvents'
+            createdAt:
+              type: string
+              format: date-time
+              nullable: true
+            updatedAt:
+              type: string
+              format: date-time
+              nullable: true
+            instanceId:
+              type: integer
+              format: int32
+              minimum: 1
+              example: 42
+          nullable: true
+    InstanceListItem:
+      allOf:
+        - '$ref': '#/components/schemas/InstanceDetails'
+        - type: object
+          required:
+            - Auth
+          properties:
+            Auth:
+              type: object
+              required:
+                - id
+                - token
+                - createdAt
+                - updatedAt
+              properties:
+                id:
+                  type: integer
+                  format: int32
+                  minimum: 1
+                  example: 42
+                token:
+                  type: string
+                createdAt:
+                  type: string
+                  format: date-time
+                updatedAt:
+                  type: string
+                  format: date-time
+              nullable: true
+    InstanceCreated:
+      type: object
+      required:
+        - id
+        - name
+        - description
+        - createdAt
+        - updatedAt
+        - Auth
+      properties:
+        id:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 42
+        name:
+          type: string
+          minLength: 1
+          example: codechat
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        Auth:
+          type: object
+          required:
+            - id
+            - token
+          properties:
+            id:
+              type: integer
+              format: int32
+              minimum: 1
+              example: 42
+            token:
+              type: string
+    InstanceToken:
+      type: object
+      required:
+        - id
+        - token
+        - createdAt
+        - updatedAt
+        - instanceId
+      properties:
+        id:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 42
+        token:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        instanceId:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 42
+    CreateInstanceRequest:
+      type: object
+      properties:
+        instanceName:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Omit this field to generate an instance name. A supplied name must contain a non-whitespace character.
+        description:
+          type: string
+          maxLength: 255
+          nullable: true
+        externalAttributes:
+          type: object
+          additionalProperties: true
+    QRCodeConnection:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+        code:
+          type: string
+        base64:
+          type: string
+          description: PNG data URL.
+        instanceName:
+          type: string
+          minLength: 1
+          example: codechat
+        connectionStatus:
+          '$ref': '#/components/schemas/ConnectionStatus'
+        alreadyConnected:
+          type: boolean
+        alreadyConnecting:
+          type: boolean
+        ownerJid:
+          type: string
+          minLength: 1
+          example: '5511999999999@s.whatsapp.net'
+    PasskeyChallenge:
+      type: object
+      required:
+        - requestId
+        - state
+        - expiresAt
+        - publicKey
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        state:
+          type: string
+          example: AWAITING_ASSERTION
+        expiresAt:
+          type: string
+          format: date-time
+        publicKey:
+          type: object
+          required:
+            - challenge
+            - timeout
+            - rpId
+            - allowCredentials
+            - userVerification
+            - extensions
+          properties:
+            challenge:
+              type: string
+            timeout:
+              type: integer
+              format: int64
+            rpId:
+              type: string
+            allowCredentials:
+              type: array
+              items:
+                type: object
+                required:
+                  - id
+                  - type
+                  - transports
+                properties:
+                  id:
+                    type: string
+                  type:
+                    type: string
+                  transports:
+                    type: array
+                    items:
+                      type: string
+                    nullable: true
+              nullable: true
+            userVerification:
+              type: string
+            extensions:
+              type: object
+              additionalProperties: true
+              nullable: true
+    PasskeyAssertionRequest:
+      type: object
+      required:
+        - requestId
+        - assertion
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        assertion:
+          type: object
+          required:
+            - id
+            - rawId
+            - type
+            - response
+          properties:
+            id:
+              type: string
+              minLength: 1
+            rawId:
+              type: string
+              minLength: 1
+              description: Unpadded base64url.
+            type:
+              type: string
+              enum:
+                - public-key
+            response:
+              type: object
+              required:
+                - clientDataJSON
+                - authenticatorData
+                - signature
+              properties:
+                clientDataJSON:
+                  type: string
+                  minLength: 1
+                  description: Unpadded base64url.
+                authenticatorData:
+                  type: string
+                  minLength: 1
+                  description: Unpadded base64url.
+                signature:
+                  type: string
+                  minLength: 1
+                  description: Unpadded base64url.
+                userHandle:
+                  type: string
+                  minLength: 1
+                  description: Unpadded base64url.
+                  nullable: true
+              additionalProperties: false
+          additionalProperties: false
+      additionalProperties: false
+    Message:
+      type: object
+      required:
+        - id
+        - keyId
+        - keyRemoteJid
+        - keyLid
+        - keyFromMe
+        - keyParticipant
+        - keyParticipantLid
+        - pushName
+        - messageType
+        - content
+        - messageTimestamp
+        - device
+        - isGroup
+        - instanceId
+      properties:
+        id:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 42
+        keyId:
+          type: string
+          minLength: 1
+        keyRemoteJid:
+          type: string
+          minLength: 1
+          example: '5511999999999@s.whatsapp.net'
+          nullable: true
+        keyLid:
+          type: string
+          nullable: true
+        keyFromMe:
+          type: boolean
+        keyParticipant:
+          type: string
+          minLength: 1
+          example: '5511999999999@s.whatsapp.net'
+          nullable: true
+        keyParticipantLid:
+          type: string
+          nullable: true
+        pushName:
+          type: string
+          nullable: true
+        messageType:
+          type: string
+          example: conversation
+        content: {}
+        messageTimestamp:
+          type: integer
+          format: int32
+          description: Unix timestamp in seconds.
+        device:
+          type: string
+          enum:
+            - ios
+            - android
+            - web
+            - unknown
+            - desktop
+        isGroup:
+          type: boolean
+          nullable: true
+        instanceId:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 42
+        metadata: {}
+        externalAttributes:
+          type: object
+          additionalProperties: true
+    MessageList:
+      type: object
+      required:
+        - messages
+      properties:
+        messages:
+          type: object
+          required:
+            - total
+            - pages
+            - currentPage
+            - records
+          properties:
+            total:
+              type: integer
+              format: int64
+            pages:
+              type: integer
+              format: int64
+            currentPage:
+              type: integer
+              format: int64
+            records:
+              type: array
+              nullable: true
+              description: A lookup by where.id returns null here when the record is missing.
+              items:
+                allOf:
+                  - '$ref': '#/components/schemas/Message'
+                  - type: object
+                    required:
+                      - MessageUpdate
+                    properties:
+                      MessageUpdate:
+                        type: array
+                        items:
+                          type: object
+                          required:
+                            - status
+                            - dateTime
+                          properties:
+                            status:
+                              type: string
+                            dateTime:
+                              type: string
+                              format: date-time
+    FindMessagesRequest:
+      type: object
+      properties:
+        where:
+          type: object
+          properties:
+            id:
+              type: integer
+              format: int32
+              minimum: 1
+            keyid:
+              type: string
+              minLength: 1
+            keyId:
+              type: string
+              minLength: 1
+            keyRemoteJid:
+              type: string
+              minLength: 1
+              example: '5511999999999@s.whatsapp.net'
+            keyFromMe:
+              oneOf:
+                - type: boolean
+                - type: string
+                  enum:
+                    - 'true'
+                    - 'false'
+            messageType:
+              type: string
+            device:
+              type: string
+              enum:
+                - ios
+                - android
+                - web
+                - unknown
+                - desktop
+            messageStatus:
+              type: string
+            messageTimestampGte:
+              type: integer
+              format: int32
+              minimum: 0
+            messageTimestampLte:
+              type: integer
+              format: int32
+              minimum: 0
+        offset:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100
+          default: 20
+          description: Page size. Zero uses the default.
+        page:
+          type: integer
+          format: int32
+          minimum: 0
+          default: 1
+          description: Page number starting at one. Zero uses the default.
+    ReadMessagesRequest:
+      description: Supply local message IDs or supply a sender, chat and list of WhatsApp message IDs.
+      oneOf:
+        - type: object
+          required:
+            - ids
+          properties:
+            ids:
+              type: array
+              items:
+                type: integer
+                format: int32
+                minimum: 1
+              minItems: 1
+          not:
+            anyOf:
+              - required: [sender]
+              - required: [chat]
+              - required: [messageIds]
+        - type: object
+          required:
+            - sender
+            - chat
+            - messageIds
+          properties:
+            sender:
+              type: string
+              minLength: 1
+              example: '5511999999999@s.whatsapp.net'
+            chat:
+              type: string
+              minLength: 1
+              example: '5511999999999@s.whatsapp.net'
+            messageIds:
+              type: array
+              items:
+                type: string
+                minLength: 1
+              minItems: 1
+          not:
+            required: [ids]
+    ArchiveChatRequest:
+      type: object
+      required:
+        - lastMessage
+        - archive
+      properties:
+        lastMessage:
+          type: object
+          required:
+            - key
+          properties:
+            key:
+              type: object
+              required:
+                - remoteJid
+                - fromMe
+                - id
+              properties:
+                remoteJid:
+                  type: string
+                  minLength: 1
+                  example: '5511999999999@s.whatsapp.net'
+                fromMe:
+                  type: boolean
+                id:
+                  type: string
+                  minLength: 1
+        archive:
+          type: boolean
+    EditMessageRequest:
+      type: object
+      required:
+        - id
+        - text
+      properties:
+        id:
+          oneOf:
+            - type: integer
+              format: int32
+              minimum: 1
+            - type: string
+              minLength: 1
+          description: Local message ID as an integer or WhatsApp key ID as a string.
+        text:
+          type: string
+          minLength: 1
+          maxLength: 65536
+          description: 'Replacement text, limited to 65536 UTF-8 bytes.'
+    MediaDataRequest:
+      description: Supply a local ID, a WhatsApp key ID, or a media payload with an optional key ID.
+      oneOf:
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: integer
+              format: int32
+              minimum: 1
+          not:
+            anyOf:
+              - required: [keyId]
+              - required: [messageType]
+              - required: [content]
+        - type: object
+          required:
+            - keyId
+          properties:
+            keyId:
+              type: string
+              minLength: 1
+              maxLength: 256
+          not:
+            anyOf:
+              - required: [id]
+              - required: [messageType]
+              - required: [content]
+        - type: object
+          required:
+            - messageType
+            - content
+          properties:
+            messageType:
+              type: string
+              enum:
+                - imageMessage
+                - videoMessage
+                - documentMessage
+                - stickerMessage
+                - audioMessage
+            content:
+              type: object
+              additionalProperties: true
+              minProperties: 1
+            keyId:
+              type: string
+              minLength: 1
+              maxLength: 256
+          not:
+            required: [id]
+    GroupParticipant:
+      type: object
+      required:
+        - id
+        - isAdmin
+        - isSuperAdmin
+      properties:
+        id:
+          type: string
+          minLength: 1
+          example: '5511999999999@s.whatsapp.net'
+        phoneNumber:
+          type: string
+          minLength: 1
+          example: '5511999999999@s.whatsapp.net'
+        lid:
+          type: string
+        isAdmin:
+          type: boolean
+        isSuperAdmin:
+          type: boolean
+        displayName:
+          type: string
+        error:
+          type: integer
+          format: int32
+    GroupInfo:
+      type: object
+      required:
+        - id
+        - subject
+        - size
+        - restrict
+        - announce
+        - isCommunity
+        - isCommunityAnnounce
+        - joinApprovalMode
+        - memberAddMode
+        - participants
+      properties:
+        id:
+          type: string
+          minLength: 1
+          example: '120363000000000000@g.us'
+        subject:
+          type: string
+        subjectOwner:
+          type: string
+          minLength: 1
+          example: '5511999999999@s.whatsapp.net'
+        subjectTime:
+          type: integer
+          format: int64
+        size:
+          type: integer
+          format: int32
+        creation:
+          type: integer
+          format: int64
+        owner:
+          type: string
+          minLength: 1
+          example: '5511999999999@s.whatsapp.net'
+        desc:
+          type: string
+        descId:
+          type: string
+        restrict:
+          type: boolean
+        announce:
+          type: boolean
+        isCommunity:
+          type: boolean
+        isCommunityAnnounce:
+          type: boolean
+        joinApprovalMode:
+          type: boolean
+        memberAddMode:
+          type: boolean
+        participants:
+          type: array
+          items:
+            '$ref': '#/components/schemas/GroupParticipant'
     RecipientFields:
       type: object
+      description: Supply exactly one nonempty recipient alias. Use a phone number or a WhatsApp JID.
+      oneOf:
+        - required: [number]
+          properties:
+            number: {type: string, minLength: 1}
+        - required: [chat]
+          properties:
+            chat: {type: string, minLength: 1}
+        - required: [recipient]
+          properties:
+            recipient: {type: string, minLength: 1}
       properties:
         number:
           type: string
@@ -303,13 +2754,13 @@ components:
           type: integer
           format: int64
           nullable: true
+          minimum: 0
+          maximum: 300000
+          description: Delay in milliseconds. The maximum is 300000 for WhatsApp voice notes and 120000 for other sends that support delay.
         presence:
           type: string
           nullable: true
-          enum:
-            - composing
-            - recording
-            - paused
+          description: Use composing for text, links, images, documents, videos, contacts and locations. Use recording for audio and PTV. WhatsApp voice notes also accept paused.
         quotedMessageId:
           type: integer
           format: int64
@@ -498,6 +2949,16 @@ components:
       type: object
       required:
         - fullName
+      anyOf:
+        - required: [wuid]
+          properties:
+            wuid: {type: string, minLength: 1}
+        - required: [phoneNumber]
+          properties:
+            phoneNumber: {type: string, minLength: 1}
+        - required: [vcard]
+          properties:
+            vcard: {type: string, minLength: 1}
       properties:
         fullName:
           type: string
@@ -540,9 +3001,13 @@ components:
         latitude:
           type: number
           format: double
+          minimum: -90
+          maximum: 90
         longitude:
           type: number
           format: double
+          minimum: -180
+          maximum: 180
     SendReactionRequest:
       type: object
       required:
@@ -574,6 +3039,7 @@ components:
                   nullable: true
             reaction:
               type: string
+              description: Emoji to send. An empty string removes the reaction.
     ProcessingAcceptedResponse:
       type: object
       required:
