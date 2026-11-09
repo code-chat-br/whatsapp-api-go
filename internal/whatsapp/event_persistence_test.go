@@ -344,6 +344,9 @@ type fakePersistenceMessages struct {
 	findResults         []findMessageResult
 	alwaysErr           error
 	createErr           error
+	updateContentCalls  int
+	updatedID           int32
+	updatedContent      json.RawMessage
 }
 
 func (f *fakePersistenceMessages) Create(context.Context, dbtypes.CreateMessageInput) (dbtypes.Message, error) {
@@ -391,8 +394,11 @@ func (f *fakePersistenceMessages) MarkReadForInstance(context.Context, int32, []
 	return nil
 }
 
-func (f *fakePersistenceMessages) UpdateContentForInstance(context.Context, int32, int32, json.RawMessage) (dbtypes.Message, error) {
-	return dbtypes.Message{}, nil
+func (f *fakePersistenceMessages) UpdateContentForInstance(_ context.Context, _ int32, id int32, content json.RawMessage) (dbtypes.Message, error) {
+	f.updateContentCalls++
+	f.updatedID = id
+	f.updatedContent = content
+	return dbtypes.Message{ID: id, Content: content}, nil
 }
 
 func (f *fakePersistenceMessages) Count(context.Context, int32, dbtypes.MessageFilters) (int64, error) {
