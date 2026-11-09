@@ -27,7 +27,7 @@ As entregas entram em uma fila em memória e são processadas por múltiplos wor
 - Eventos oficiais documentados: `27`.
 - Pacote de constantes: `internal/database/types/webhook.go`.
 - Dispatcher: `internal/webhook/manager.go`.
-- Versão auditada do whatsmeow: `v0.0.0-20260630180629-b572e5bcb92b`.
+- Versão auditada do whatsmeow: `v0.0.0-20261107160454-79dc2a8c33df`.
 
 ## Configuração
 

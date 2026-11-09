@@ -4,11 +4,27 @@ import (
 	"testing"
 	"time"
 
+	"go.mau.fi/whatsmeow/proto/waE2E"
+	"go.mau.fi/whatsmeow/proto/waHistorySync"
 	"go.mau.fi/whatsmeow/proto/waSyncAction"
 	watypes "go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	"google.golang.org/protobuf/proto"
 )
+
+func TestHistorySyncWebhookDataOmitsDownloadNotification(t *testing.T) {
+	event := &events.HistorySync{
+		Data:         &waHistorySync.HistorySync{},
+		Notification: &waE2E.HistorySyncNotification{MediaKey: []byte{1}},
+	}
+	got, err := historySyncWebhookData(event, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got["type"] != "history.sync" || got["data"] == nil || len(got) != 3 {
+		t.Fatalf("unexpected history sync payload: %#v", got)
+	}
+}
 
 func TestChatUpdatedWebhookDataSubtypes(t *testing.T) {
 	jid := watypes.NewJID("120363000000000000", watypes.GroupServer)

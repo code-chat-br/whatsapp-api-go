@@ -64,7 +64,11 @@ func presenceUpdatedWebhookData(event any, processingTime time.Time) (map[string
 }
 
 func historySyncWebhookData(event *events.HistorySync, processingTime time.Time) (map[string]any, error) {
-	source, err := webhooksvc.NewEventNormalizer().ToJSONMap(event)
+	if event == nil {
+		return nil, fmt.Errorf("history sync event is nil")
+	}
+	// The notification carries download credentials for Whatsmeow's internal use.
+	source, err := webhooksvc.NewEventNormalizer().ToJSONMap(map[string]any{"data": event.Data})
 	if err != nil {
 		return nil, err
 	}

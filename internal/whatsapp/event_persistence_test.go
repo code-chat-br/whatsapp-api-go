@@ -257,7 +257,15 @@ func TestHandleContactDispatchesPersistedContact(t *testing.T) {
 	service := NewEventPersistenceService(EventPersistenceConfig{SaveDataContacts: true}, &fakePersistenceMessages{}, &fakePersistenceMessageUpdates{}, contacts, zerolog.Nop())
 	service.SetWebhookDispatcher(fakeInstanceFinder(), webhooks)
 
-	service.HandleContact(context.Background(), &ManagedWhatsAppClient{InstanceID: "42", InstanceName: "codechat"}, contactEvent())
+	managed := &ManagedWhatsAppClient{InstanceID: "42", InstanceName: "codechat"}
+	removedContact := contactEvent()
+	removedContact.Action = nil
+	service.HandleContact(context.Background(), managed, removedContact)
+	if contacts.upsertCalls != 0 || webhooks.dispatchCalls != 0 {
+		t.Fatalf("contact removal produced upsert calls=%d and webhook calls=%d", contacts.upsertCalls, webhooks.dispatchCalls)
+	}
+
+	service.HandleContact(context.Background(), managed, contactEvent())
 
 	if contacts.upsertCalls != 1 {
 		t.Fatalf("expected contact upsert, got %d", contacts.upsertCalls)

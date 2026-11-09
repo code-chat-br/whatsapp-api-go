@@ -37,8 +37,8 @@ Este projeto não usa a API oficial do WhatsApp.
 ## Tecnologias utilizadas
 
 - Go `1.26`.
-- Fiber `v3.4.0`.
-- Whatsmeow `v0.0.0-20260630180629-b572e5bcb92b`.
+- Fiber `v3.7.0`.
+- Whatsmeow `v0.0.0-20261107160454-79dc2a8c33df`.
 - PostgreSQL via `pgx/v5`.
 - SQLite via `go-sqlite3` para store de sessão Whatsmeow.
 - `sqlc` para código de acesso a dados já gerado no repositório.

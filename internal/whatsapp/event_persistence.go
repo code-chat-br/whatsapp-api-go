@@ -276,7 +276,8 @@ func (s *EventPersistenceService) syncContacts(ctx context.Context, managed *Man
 }
 
 func (s *EventPersistenceService) HandleContact(ctx context.Context, managed *ManagedWhatsAppClient, event *events.Contact) {
-	if event == nil {
+	// Whatsmeow uses a nil action for contact removals.
+	if event == nil || event.Action == nil {
 		return
 	}
 	contact := normalizeContactEvent(mustAtoi32(managed.InstanceID), event)

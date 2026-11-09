@@ -13,7 +13,7 @@ import (
 	dbtypes "whatsapp-go-api/internal/database/types"
 )
 
-const auditedWhatsmeowVersion = "v0.0.0-20260630180629-b572e5bcb92b"
+const auditedWhatsmeowVersion = "v0.0.0-20261107160454-79dc2a8c33df"
 
 func TestWhatsmeowVersionForWebhookCoverage(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "go.mod"))
@@ -47,7 +47,7 @@ type eventCoverageEntry struct {
 
 func TestWebhookEventCoverage(t *testing.T) {
 	known := knownWhatsmeowEventTypes()
-	if len(known) != 74 {
+	if len(known) != 76 {
 		t.Fatalf("unexpected whatsmeow event type count: %d", len(known))
 	}
 	seen := map[string]struct{}{}
@@ -149,6 +149,7 @@ func knownWhatsmeowEventTypes() []string {
 		"NewsletterLeave",
 		"NewsletterLiveUpdate",
 		"NewsletterMessageMeta",
+		"NewsletterMilestone",
 		"NewsletterMuteChange",
 		"NotifyAccountReachoutTimelock",
 		"OfflineSyncCompleted",
@@ -167,6 +168,7 @@ func knownWhatsmeowEventTypes() []string {
 		"QR",
 		"QRScannedWithoutMultidevice",
 		"Receipt",
+		"RotateADVSecret",
 		"Star",
 		"StreamError",
 		"StreamReplaced",
@@ -228,6 +230,7 @@ func webhookCoverageMatrix() []eventCoverageEntry {
 		{"NewsletterLeave", "registerEventHandlers", dbtypes.WebhookEventNewsletter, coverageCovered, ""},
 		{"NewsletterLiveUpdate", "registerEventHandlers", dbtypes.WebhookEventNewsletter, coverageCovered, ""},
 		{"NewsletterMessageMeta", "Message.NewsletterMeta", "", coverageInternalOnly, "metadata struct attached to Message, not emitted independently"},
+		{"NewsletterMilestone", "fallback log", "", coverageUnsupported, "newsletter milestones are outside the current webhook contract"},
 		{"NewsletterMuteChange", "registerEventHandlers", dbtypes.WebhookEventNewsletter, coverageCovered, ""},
 		{"NotifyAccountReachoutTimelock", "registerEventHandlers", dbtypes.WebhookEventStatusInstance, coverageCovered, ""},
 		{"OfflineSyncCompleted", "registerEventHandlers", dbtypes.WebhookEventStatusInstance, coverageCovered, ""},
@@ -246,6 +249,7 @@ func webhookCoverageMatrix() []eventCoverageEntry {
 		{"QR", "QR channel", dbtypes.WebhookEventQRCodeUpdated, coverageCovered, ""},
 		{"QRScannedWithoutMultidevice", "QR channel/fallback log", "", coverageHandledWithoutWebhook, "QR channel maps this to pairing failure state; AddEventHandler fallback logs future direct emissions safely"},
 		{"Receipt", "EventPersistenceService.HandleReceipt", dbtypes.WebhookEventMessagesUpdated, coverageCovered, ""},
+		{"RotateADVSecret", "QR channel/fallback log", "", coverageIntentionallyIgnored, "Whatsmeow handles rotation in the QR channel and the event carries pairing secrets"},
 		{"Star", "registerEventHandlers", dbtypes.WebhookEventMessagesStarred, coverageCovered, ""},
 		{"StreamError", "registerEventHandlers", dbtypes.WebhookEventConnectionUpdated, coverageCovered, ""},
 		{"StreamReplaced", "registerEventHandlers", dbtypes.WebhookEventConnectionUpdated, coverageCovered, ""},

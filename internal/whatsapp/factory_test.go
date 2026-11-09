@@ -84,7 +84,12 @@ func TestNewWhatsAppSessionContainerSQLitePersistsDevice(t *testing.T) {
 	jid := watypes.NewJID("5511999999999", watypes.DefaultUserServer)
 	device := container.NewDevice()
 	device.ID = &jid
-	device.Account = &waAdv.ADVSignedDeviceIdentity{}
+	device.Account = &waAdv.ADVSignedDeviceIdentity{
+		Details:             []byte{1},
+		AccountSignature:    make([]byte, 64),
+		AccountSignatureKey: make([]byte, 32),
+		DeviceSignature:     make([]byte, 64),
+	}
 	device.Platform = "test"
 	if err := device.Save(ctx); err != nil {
 		_ = container.Close()

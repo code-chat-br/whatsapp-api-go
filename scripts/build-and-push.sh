@@ -14,7 +14,7 @@ Required variables:
   IMAGE_VERSION       Required version tag, for example v1.0.0
 
 Optional variables:
-  GO_VERSION          Go image version. Defaults to the go.mod directive.
+  GO_VERSION          Go image version. Defaults to the major.minor series in go.mod.
   APP_NAME            Defaults to whatsapp-go-api.
   APP_DESCRIPTION     Defaults to the project README description.
   APP_DEVELOPER       Defaults to CodeChat.
@@ -91,7 +91,7 @@ require_env DOCKERHUB_USERNAME
 require_env DOCKER_IMAGE_NAME
 require_env IMAGE_VERSION
 
-GO_VERSION="${GO_VERSION:-$(awk '/^go / {print $2; exit}' go.mod)}"
+GO_VERSION="${GO_VERSION:-$(awk '/^go / {split($2, version, "."); print version[1] "." version[2]; exit}' go.mod)}"
 [[ -n "$GO_VERSION" ]] || fail "GO_VERSION could not be detected from go.mod"
 
 VCS_REF="$(git rev-parse HEAD)"
