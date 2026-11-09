@@ -1,6 +1,7 @@
 package whatsapp
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -35,20 +36,40 @@ func NewMessageEventNormalizer() MessageEventNormalizer {
 }
 
 func (n MessageEventNormalizer) NormalizeMessage(instanceID int32, event *waevents.Message) (dbtypes.CreateMessageInput, error) {
+	return n.NormalizeMessageWithEdit(instanceID, event, resolveMessageEdit(context.Background(), event, nil))
+}
+
+// NormalizeMessageWithEdit normalizes the event using an already resolved edit.
+// When edit is not nil the stored type is editedMessage, the content is the new
+// content and the metadata points to the edited message.
+func (n MessageEventNormalizer) NormalizeMessageWithEdit(instanceID int32, event *waevents.Message, edit *messageEdit) (dbtypes.CreateMessageInput, error) {
 	if event == nil {
 		return dbtypes.CreateMessageInput{}, fmt.Errorf("%w: nil message event", ErrUnsupportedMessageContent)
 	}
-	content, err := n.NormalizeMessageContent(event.Message)
-	if err != nil {
-		return dbtypes.CreateMessageInput{}, err
+	if edit == nil {
+		content, err := n.NormalizeMessageContent(event.Message)
+		if err != nil {
+			return dbtypes.CreateMessageInput{}, err
+		}
+		return n.normalizeFromInfo(instanceID, event.Info, content, n.messageMetadata(event, nil, "")), nil
 	}
 
-	if event.IsEdit {
-		content.MessageType = "editedMessage"
+	content := unhandledContent()
+	if edit.Content != nil {
+		normalized, err := n.NormalizeMessageContent(edit.Content)
+		if err != nil {
+			return dbtypes.CreateMessageInput{}, err
+		}
+		content = normalized
 	}
+	editedType := content.MessageType
+	content.MessageType = "editedMessage"
+	return n.normalizeFromInfo(instanceID, event.Info, content, n.messageMetadata(event, edit, editedType)), nil
+}
 
-	message := n.normalizeFromInfo(instanceID, event.Info, content, n.messageMetadata(event))
-	return message, nil
+func unhandledContent() normalizedContent {
+	content, _ := json.Marshal(map[string]any{"unhandled": true})
+	return normalizedContent{MessageType: "unknownMessage", Content: content}
 }
 
 func (n MessageEventNormalizer) NormalizeFBMessage(instanceID int32, event *waevents.FBMessage) (dbtypes.CreateMessageInput, error) {
@@ -183,8 +204,7 @@ func (n MessageEventNormalizer) NormalizeMessageContent(message *wae2e.Message) 
 		return n.protoContent("eventMessage", payload)
 	}
 
-	content, _ := json.Marshal(map[string]any{"unhandled": true})
-	return normalizedContent{MessageType: "unknownMessage", Content: content}, nil
+	return unhandledContent(), nil
 }
 
 func (n MessageEventNormalizer) normalizeFBContent(message armadillo.MessageApplicationSub) (normalizedContent, error) {
@@ -210,7 +230,7 @@ func (n MessageEventNormalizer) protoContent(messageType string, payload proto.M
 	return normalizedContent{MessageType: messageType, Content: json.RawMessage(content)}, nil
 }
 
-func (n MessageEventNormalizer) messageMetadata(event *waevents.Message) json.RawMessage {
+func (n MessageEventNormalizer) messageMetadata(event *waevents.Message, edit *messageEdit, editedType string) json.RawMessage {
 	metadata := map[string]any{
 		"eventType":             "Message",
 		"source":                "whatsmeow",
@@ -229,6 +249,17 @@ func (n MessageEventNormalizer) messageMetadata(event *waevents.Message) json.Ra
 		"isLottieSticker":       event.IsLottieSticker,
 		"retryCount":            event.RetryCount,
 		"serverId":              int64(event.Info.ServerID),
+	}
+	if edit != nil {
+		metadata["isEdit"] = true
+		metadata["editSource"] = edit.Source
+		metadata["editedMessageId"] = edit.OriginalKeyID
+		if edit.Content != nil {
+			metadata["editedMessageType"] = editedType
+		}
+		if edit.DecryptError != "" {
+			metadata["editDecryptError"] = edit.DecryptError
+		}
 	}
 	raw, _ := json.Marshal(metadata)
 	return raw

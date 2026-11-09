@@ -47,6 +47,8 @@ type EventPersistenceService struct {
 	webhooks       webhooksvc.WebhookManager
 	normalizer     MessageEventNormalizer
 	logger         zerolog.Logger
+	// decrypterFor returns the client used to decrypt secret encrypted edits.
+	decrypterFor func(managed *ManagedWhatsAppClient) secretMessageDecrypter
 }
 
 type webhookInstanceFinder interface {
@@ -82,6 +84,7 @@ func NewEventPersistenceService(
 		contacts:       contacts,
 		normalizer:     NewMessageEventNormalizer(),
 		logger:         logger.With().Str("component", "event_persistence").Logger(),
+		decrypterFor:   managedSecretDecrypter,
 	}
 }
 
@@ -92,7 +95,18 @@ func (s *EventPersistenceService) SetWebhookDispatcher(instances webhookInstance
 
 func (s *EventPersistenceService) HandleMessage(ctx context.Context, managed *ManagedWhatsAppClient, event *events.Message) {
 	instanceID := mustAtoi32(managed.InstanceID)
-	message, err := s.normalizer.NormalizeMessage(instanceID, event)
+	edit := resolveMessageEdit(ctx, event, s.decrypterFor(managed))
+	if edit != nil && edit.DecryptError != "" {
+		s.logger.Warn().
+			Str("event", "message_edit").
+			Int32("instanceId", instanceID).
+			Str("instanceName", managed.InstanceName).
+			Str("messageKeyId", string(event.Info.ID)).
+			Str("editedMessageId", edit.OriginalKeyID).
+			Str("error", edit.DecryptError).
+			Msg("edited message content could not be decrypted")
+	}
+	message, err := s.normalizer.NormalizeMessageWithEdit(instanceID, event, edit)
 	if err != nil {
 		s.logger.Warn().Err(err).Int32("instanceId", instanceID).Str("instanceName", managed.InstanceName).Str("event", "message").Msg("message event not persisted")
 		return
@@ -115,8 +129,57 @@ func (s *EventPersistenceService) HandleMessage(ctx context.Context, managed *Ma
 			Trace().
 			RawJSON(managed.InstanceName, bin).
 			Msg("new message")
+		if edit != nil {
+			s.applyEditToOriginal(ctx, managed, instanceID, edit, message)
+		}
 		s.dispatchMessageUpsertWebhook(ctx, managed, message.KeyID)
 	}
+}
+
+func managedSecretDecrypter(managed *ManagedWhatsAppClient) secretMessageDecrypter {
+	if managed == nil || managed.Client == nil {
+		return nil
+	}
+	return managed.Client
+}
+
+// applyEditToOriginal writes the edited text or caption into the stored original
+// message, keeping the previous value. Edits that could not be read are skipped.
+func (s *EventPersistenceService) applyEditToOriginal(ctx context.Context, managed *ManagedWhatsAppClient, instanceID int32, edit *messageEdit, editMessage dbtypes.CreateMessageInput) {
+	if edit.Content == nil || strings.TrimSpace(edit.OriginalKeyID) == "" {
+		return
+	}
+	logger := s.logger.With().
+		Str("event", "message_edit").
+		Int32("instanceId", instanceID).
+		Str("instanceName", managed.InstanceName).
+		Str("messageKeyId", editMessage.KeyID).
+		Str("editedMessageId", edit.OriginalKeyID).
+		Logger()
+	original, err := s.messages.FindByKeyIDForInstance(ctx, instanceID, edit.OriginalKeyID)
+	if err != nil {
+		if errors.Is(err, repository.ErrMessageNotFound) {
+			logger.Warn().Msg("edited message not found in store")
+			return
+		}
+		logger.Error().Err(err).Msg("failed to load edited message")
+		return
+	}
+	editedAt := time.Unix(int64(editMessage.MessageTimestamp), 0)
+	content, changed, err := applyEditToStoredContent(original.Content, editMessage.Content, editMessage.KeyID, editedAt)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to build edited message content")
+		return
+	}
+	if !changed {
+		logger.Debug().Msg("edit carries no text or caption, stored message unchanged")
+		return
+	}
+	if _, err := s.messages.UpdateContentForInstance(ctx, instanceID, original.ID, content); err != nil {
+		logger.Error().Err(err).Int32("messageId", original.ID).Msg("failed to update edited message content")
+		return
+	}
+	logger.Debug().Int32("messageId", original.ID).Msg("stored message content updated with edit")
 }
 
 func (s *EventPersistenceService) HandleFBMessage(ctx context.Context, managed *ManagedWhatsAppClient, event *events.FBMessage) {
